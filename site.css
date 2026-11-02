@@ -367,3 +367,11 @@ footer{padding:36px var(--pad) calc(40px + env(safe-area-inset-bottom));border-t
 .lb-acts .xs-btn{min-height:38px;min-width:0;padding:0 14px;font-size:14px}
 .lb-img{flex:1;min-height:0;display:grid;place-items:center;padding:0 16px 16px}
 .lb-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+/* upload vs mint (owner, 2 Nov 2026) */
+.tile{position:relative}
+.tile .badge{position:absolute;left:6px;bottom:6px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.72);color:#e5e5e5;font:600 10px/1 var(--xs-hf);letter-spacing:.02em;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.tile .badge.on{background:var(--red);color:#0b1200}
+.lb-acts{flex-wrap:wrap;justify-content:flex-end}
+.lb-acts .xs-btn:disabled{opacity:.55;cursor:default}
+.lb-note{margin:0;padding:0 16px 18px;text-align:center;color:var(--muted);font:400 14px/1.5 var(--xs-bf)}
+@media(max-width:640px){.lb-top{flex-direction:column;align-items:stretch}.lb-acts{justify-content:flex-start}}

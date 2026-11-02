@@ -45,12 +45,11 @@
   <div class="xs-cat"><p class="xs-eye">Your library</p><h2 id="lib-h">Private to <i>your wallet.</i></h2><p class="xs-sub">Every photo is encrypted on your device before it goes anywhere. Only your bWalletX can open it again.</p></div>
   <div class="lib-out" id="out"><p><b>Connect bWalletX to open your library.</b> Nothing about your photos is visible to us, or to anyone else, without your wallet.</p><button class="xs-btn xs-gold" id="libBtn" type="button">Connect bWalletX</button></div>
   <div class="lib-in" id="in" hidden>
-    <div class="vhead"><p id="count">Opening your wallet…</p><label class="xs-btn xs-gold" for="pick" id="addBtn">Add photos</label></div>
-    <p class="soon" id="soon" hidden>Adding photos opens soon. You’re connected and ready: when it opens, add photos here and they’re sealed to your keys.</p>
+    <div class="vhead"><p id="count">Opening your wallet…</p><label class="xs-btn xs-gold" for="pick" id="addBtn">Upload photos</label></div>
     <label class="drop" id="drop" for="pick">
       <input type="file" id="pick" accept="image/*" multiple>
-      <strong>Drop photos here, or tap to choose</strong>
-      Each photo is resized to 1600 px, stripped of location data, encrypted on this device, then kept with your keys.
+      <strong>Drop photos here, or tap to upload</strong>
+      Each photo is resized to 1600 px, stripped of location data and encrypted with your wallet. Open one to mint it on chain.
     </label>
     <ul class="jobs" id="jobs"></ul>
     <div class="grid" id="grid"></div>
@@ -90,9 +89,9 @@
 <section class="sec how" id="how" aria-labelledby="how-h">
   <div class="head"><div><span class="kick mono rv">For photographers</span><h2 id="how-h" class="rv">Your photos, <span>your keys.</span></h2><p class="sub rv">From the family album to a paid shoot, you decide who sees what.</p></div></div>
   <ol class="steps">
-    <li class="rv st-i"><span class="n" aria-hidden="true">1</span><h3>Add your photos</h3><p>From your camera roll or your camera. Location data comes out before anything else happens.</p><span class="s">Live</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">1</span><h3>Upload your photos</h3><p>From your camera roll or your camera. Location data comes out before anything else happens.</p><span class="s">Live</span></li>
     <li class="rv st-i"><span class="n" aria-hidden="true">2</span><h3>Sealed on your device</h3><p>Each photo is encrypted in your browser with its own key, and your bWalletX holds that key.</p><span class="s">Live</span></li>
-    <li class="rv st-i"><span class="n" aria-hidden="true">3</span><h3>Your library, anywhere</h3><p>Albums kept encrypted in bDriveX, and opened on any device where you have your wallet.</p><span class="s">Next</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">3</span><h3>Mint the ones you keep</h3><p>Open a photo and mint it: it goes on chain, held by your wallet. Your wallet shows the fee first.</p><span class="s">Opens soon</span></li>
     <li class="rv st-i"><span class="n" aria-hidden="true">4</span><h3>Sell or license</h3><p>Set a price for personal or commercial use. The buyer’s wallet gets the key, and you’re paid directly.</p><span class="s">Next</span></li>
   </ol>
   <p class="note"><span><b>Nothing goes public unless you choose.</b> Your library stays encrypted. A photo you list for sale is checked before it appears, so the market stays safe.</span></p>
@@ -102,9 +101,9 @@
   <h2 class="sr" id="st-h">Status</h2>
   <div class="st">
     <div><h3 class="mono"><i></i>Live today</h3>
-      <ul><li><b>bWalletX</b>, your own wallet, on web, iPhone, Android, desktop and Chrome.</li><li><b>Your private library</b> on bphotosx.com: connect, and your photos open only for you.</li><li><b>Encryption on your device</b>, with keys held by your wallet.</li></ul></div>
+      <ul><li><b>bWalletX</b>, your own wallet, on web, iPhone, Android, desktop and Chrome.</li><li><b>Upload to your private library</b>, encrypted and kept on this device for now.</li><li><b>Encryption on your device</b>, with keys held by your wallet.</li></ul></div>
     <div class="nx"><h3 class="mono"><i></i>Next</h3>
-      <ul><li><b>Adding photos</b>, once the bWalletX phone update is out.</li><li><b>Albums in bDriveX</b>, on every device you use.</li><li><b>Sell and license your photos</b>, paid straight to you.</li><li><b>Edit with b</b>, our wallet agent, in the bPhotosX Studio.</li></ul></div>
+      <ul><li><b>Minting your photos</b>, once the bWalletX phone update is out.</li><li><b>Your library on every device</b>, kept encrypted in bDriveX.</li><li><b>Sell and license your photos</b>, paid straight to you.</li><li><b>Edit with b</b>, our wallet agent, in the bPhotosX Studio.</li></ul></div>
   </div>
 </section>
 
@@ -127,8 +126,9 @@
 <div class="dock" id="dock"><a class="btn btn-gold" href="https://bwalletx.com/get">Get bWalletX</a></div>
 
 <div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Photo">
-  <div class="lb-top"><span class="lb-meta" id="lbMeta"></span><span class="lb-acts"><a class="xs-btn xs-ghost" id="lbSave" download>Save</a><a class="xs-btn xs-ghost" id="lbTx" target="_blank" rel="noopener">On chain</a><button class="xs-btn xs-ghost" id="lbX" type="button" aria-label="Close">Close</button></span></div>
+  <div class="lb-top"><span class="lb-meta" id="lbMeta"></span><span class="lb-acts"><button class="xs-btn xs-gold" id="lbMint" type="button">Mint on chain</button><a class="xs-btn xs-ghost" id="lbTx" target="_blank" rel="noopener">On chain</a><a class="xs-btn xs-ghost" id="lbSave" download>Save</a><button class="xs-btn xs-ghost" id="lbDel" type="button">Remove</button><button class="xs-btn xs-ghost" id="lbX" type="button" aria-label="Close">Close</button></span></div>
   <div class="lb-img"><img id="lbImg" alt=""></div>
+  <p class="lb-note" id="lbNote"></p>
 </div>
 
 <script src="/site.js"></script>

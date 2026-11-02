@@ -157,18 +157,29 @@
     return { id, meta, blob: new Blob([pt.subarray(4 + mLen)], { type: meta.type || 'image/jpeg' }) };
   }
 
-  /* ---------- mint ---------- */
+  /* ---------- upload and mint ---------- */
+  // Two steps on purpose (owner, 2 Nov 2026): people know "upload"; minting is new, costs a fee and is permanent.
+  // Upload seals the photo and keeps it in this browser (IndexedDB, ciphertext only) until bDriveX can hold the library.
+  // Mint takes one uploaded photo on chain: the blurred preview to Wallet › NFTs, the sealed original to this basket.
 
   const quoteSats = (bytes) => Math.ceil((bytes + 600) * FEE_SAT_PER_BYTE + 2);
 
-  async function mint(wallet, file, onStep) {
+  async function upload(wallet, file, onStep) {
     onStep('Preparing');
     const { photo, preview, w, h } = await prepare(file);
     const id = toHex(crypto.getRandomValues(new Uint8Array(8)));
     const name = (file.name || 'Photo').replace(/\.[^.]+$/, '').slice(0, 100) || 'Photo';
-    onStep('Sealing');
-    const sealed = await seal(wallet, id, { v: 1, name, type: 'image/jpeg', w, h, mintedAt: new Date().toISOString() }, photo);
-    if (sealed.length > MAX_SEALED_BYTES) throw new Error('That photo is too big to mint.');
+    const addedAt = new Date().toISOString();
+    onStep('Sealing with your wallet');
+    const sealed = await seal(wallet, id, { v: 1, name, type: 'image/jpeg', w, h, addedAt }, photo);
+    if (sealed.length > MAX_SEALED_BYTES) throw new Error('That photo is too big.');
+    const item = { key: `${identity}:${id}`, identity, id, name, addedAt, sealed, preview };
+    await store.put(item);
+    return item;
+  }
+
+  async function mintPhoto(wallet, item, onStep) {
+    const { sealed, preview, name, id } = item;
     const ord = await wallet.getPublicKey({ protocolID: ORDINAL_RECEIVE, keyID: 'ordinal', counterparty: 'self' });
     const vault = await wallet.getPublicKey({ protocolID: PROTO, keyID: VAULT_KEY, counterparty: 'self' });
     onStep(`Approve in bWalletX (about ${quoteSats(preview.length + sealed.length).toLocaleString()} sats)`);
@@ -188,8 +199,34 @@
       options: { randomizeOutputs: false },
     });
     if (!txid) throw new Error('bWalletX didn’t return a transaction.');
+    await store.put({ ...item, txid });
     return txid;
   }
+
+  /* ---------- this device's library (IndexedDB, sealed photos only) ---------- */
+
+  const store = (() => {
+    let dbp = null;
+    const db = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open('bphotosx', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('photos', { keyPath: 'key' }).createIndex('identity', 'identity');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }));
+    const tx = async (mode, fn) => {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const t = d.transaction('photos', mode), req = fn(t.objectStore('photos'));
+        t.oncomplete = () => res(req && req.result);
+        t.onerror = t.onabort = () => rej(t.error || new Error('This browser couldn’t save the photo.'));
+      });
+    };
+    return {
+      put: (item) => tx('readwrite', (s) => s.put(item)),
+      del: (key) => tx('readwrite', (s) => s.delete(key)),
+      mine: (who) => tx('readonly', (s) => s.index('identity').getAll(who)).catch(() => []),
+    };
+  })();
 
   /* ---------- wallet ---------- */
 
@@ -245,67 +282,85 @@
     try { C.clearPairing?.(); } catch {}
     remember(false);
     wallet = identity = null;
-    urls.forEach((u) => URL.revokeObjectURL(u));
+    urls.forEach((u) => URL.revokeObjectURL(u.url));
     urls.clear();
     $('grid').innerHTML = '';
     $('jobs').innerHTML = '';
     drawNav();
   }
 
-  /* ---------- gallery ---------- */
+  /* ---------- library ---------- */
 
-  const urls = new Map(); // outpoint -> object URL of the opened photo (memory only, never stored)
+  const urls = new Map(); // photo id -> { url, meta } of the opened photo (memory only, never stored)
   let loadSeq = 0;
+
+  /** The photo id from a sealed body's header (plaintext there, reveals nothing), or null. */
+  function sealedId(body) {
+    if (!body || MAGIC.some((b, i) => body[i] !== b)) return null;
+    return new TextDecoder().decode(body.subarray(5, 5 + body[4]));
+  }
 
   async function loadPhotos() {
     const seq = ++loadSeq;
     const grid = $('grid'), count = $('count');
     count.textContent = 'Opening your photos…';
-    let outs;
+    // Uploaded on this device, plus anything minted (also found when uploaded elsewhere), one entry per photo id.
+    const byId = new Map();
+    for (const it of await store.mine(identity)) byId.set(it.id, { id: it.id, body: it.sealed, local: it, txid: it.txid || null });
     try {
-      const r = await wallet.listOutputs({ basket: BASKET, include: 'locking scripts', includeCustomInstructions: true, limit: 200 });
-      outs = (r.outputs || []).filter((o) => o.spendable !== false);
-    } catch (e) {
-      count.textContent = `Couldn’t read your photos: ${(e && e.message) || 'try again'}`;
-      return;
+      const r = await wallet.listOutputs({ basket: BASKET, include: 'locking scripts', limit: 200 });
+      for (const o of r.outputs || []) {
+        if (o.spendable === false) continue;
+        const ins = o.lockingScript && readInscription(o.lockingScript);
+        const id = ins && ins.type === SEALED_TYPE && sealedId(ins.body);
+        if (!id) continue;
+        const e = byId.get(id);
+        const txid = String(o.outpoint).split(/[._]/)[0];
+        if (e) e.txid = e.txid || txid; else byId.set(id, { id, body: ins.body, local: null, txid });
+      }
+    } catch {
+      // the wallet can refuse a listing; this device's uploads still show
     }
     if (seq !== loadSeq) return;
-    count.textContent = outs.length === 1 ? '1 photo, sealed to your keys' : `${outs.length} photos, sealed to your keys`;
+    const entries = [...byId.values()].sort((a, b) => String(b.local?.addedAt || '').localeCompare(String(a.local?.addedAt || '')));
+    const minted = entries.filter((e) => e.txid).length;
+    count.textContent = !entries.length ? 'No photos yet.'
+      : `${entries.length === 1 ? '1 photo' : `${entries.length} photos`}, sealed to your keys${minted ? ` · ${minted} minted` : ''}`;
     grid.innerHTML = '';
-    if (!outs.length) {
-      grid.innerHTML = '<p class="empty" style="grid-column:1/-1">No photos yet. Your first one shows up here.</p>';
+    if (!entries.length) {
+      grid.innerHTML = '<p class="empty">Upload your first photo. It stays encrypted, and only your wallet can open it.</p>';
       return;
     }
-    const tiles = outs.reverse().map((o) => {
+    const tiles = entries.map((e) => {
       const t = document.createElement('button');
       t.type = 'button';
       t.className = 'tile locked';
       t.textContent = 'Opening…';
       t.disabled = true;
       grid.appendChild(t);
-      return { o, t };
+      return { e, t };
     });
     // Two at a time: every photo is one wallet decrypt, and the phone relay allows about 60 frames a minute.
     let next = 0;
     const work = async () => {
       while (next < tiles.length && seq === loadSeq) {
-        const { o, t } = tiles[next++];
+        const { e, t } = tiles[next++];
         try {
-          const ins = o.lockingScript && readInscription(o.lockingScript);
-          if (!ins || ins.type !== SEALED_TYPE) throw new Error('unreadable');
-          const { meta, blob } = await unseal(wallet, ins.body);
-          if (seq !== loadSeq) return;
-          const url = URL.createObjectURL(blob);
-          urls.set(o.outpoint, url);
+          let open = urls.get(e.id);
+          if (!open) {
+            const r = await unseal(wallet, e.body);
+            if (seq !== loadSeq) return;
+            open = { url: URL.createObjectURL(r.blob), meta: r.meta };
+            urls.set(e.id, open);
+          }
+          const { url, meta } = open;
           t.className = 'tile';
           t.disabled = false;
-          t.textContent = '';
-          const img = document.createElement('img');
+          t.innerHTML = `<img alt=""><span class="badge${e.txid ? ' on' : ''}">${e.txid ? 'Minted' : 'On this device'}</span>`;
+          const img = t.querySelector('img');
           img.src = url;
           img.alt = meta.name || 'Photo';
-          img.loading = 'lazy';
-          t.appendChild(img);
-          t.onclick = () => openPhoto(url, meta, o.outpoint);
+          t.onclick = () => openPhoto(e, url, meta);
         } catch {
           t.textContent = 'Can’t open';
         }
@@ -314,27 +369,74 @@
     await Promise.all([work(), work()]);
   }
 
-  function openPhoto(url, meta, outpoint) {
-    const txid = String(outpoint).split(/[._]/)[0];
+  let current = null;
+  function openPhoto(e, url, meta) {
+    current = e;
     $('lbImg').src = url;
     $('lbImg').alt = meta.name || 'Photo';
-    $('lbMeta').textContent = [meta.name, meta.mintedAt && new Date(meta.mintedAt).toLocaleDateString()].filter(Boolean).join(' · ');
+    const when = meta.addedAt || meta.mintedAt;
+    $('lbMeta').textContent = [meta.name, when && new Date(when).toLocaleDateString()].filter(Boolean).join(' · ');
     $('lbSave').href = url;
     $('lbSave').download = `${(meta.name || 'photo').replace(/[^\w .-]/g, '')}.jpg`;
-    $('lbTx').href = `https://whatsonchain.com/tx/${txid}`;
+    $('lbTx').hidden = !e.txid;
+    if (e.txid) $('lbTx').href = `https://whatsonchain.com/tx/${e.txid}`;
+    const mint = $('lbMint');
+    mint.hidden = !!e.txid || !e.local;
+    mint.disabled = !canMint;
+    mint.textContent = canMint ? 'Mint on chain' : 'Minting opens soon';
+    mint.title = canMint ? '' : 'Minting opens once the bWalletX phone update is out.';
+    $('lbDel').hidden = !e.local || !!e.txid;
+    $('lbDel').textContent = 'Remove';
+    $('lbNote').textContent = e.txid
+      ? 'Minted: the sealed original is on chain, held by your wallet, with a blurred preview in Wallet › NFTs.'
+      : 'Uploaded: kept encrypted on this device. Mint it to put it on chain, held by your wallet. Your wallet shows the fee first, and minting is permanent.';
     $('lb').hidden = false;
     $('lbX').focus();
   }
-  const closePhoto = () => { $('lb').hidden = true; $('lbImg').removeAttribute('src'); };
+  const closePhoto = () => { $('lb').hidden = true; $('lbImg').removeAttribute('src'); current = null; };
   $('lbX').onclick = closePhoto;
   $('lb').onclick = (e) => { if (e.target.closest('.lb-img') && e.target.tagName !== 'IMG') closePhoto(); };
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('lb').hidden) closePhoto(); });
+
+  let minting = false;
+  $('lbMint').onclick = async () => {
+    const e = current;
+    if (!e || !e.local || !canMint || minting) return;
+    minting = true;
+    const btn = $('lbMint');
+    btn.disabled = true;
+    try {
+      const txid = await mintPhoto(wallet, e.local, (s) => { btn.textContent = s; });
+      e.txid = txid;
+      e.local = { ...e.local, txid };
+      closePhoto();
+      loadPhotos();
+    } catch (err) {
+      btn.textContent = 'Mint on chain';
+      $('lbNote').textContent = (err && err.message) || 'Not minted.';
+    } finally {
+      btn.disabled = !canMint;
+      minting = false;
+    }
+  };
+  // Removing an upload that isn't minted: a second tap confirms (no browser dialogs).
+  $('lbDel').onclick = async () => {
+    const e = current, btn = $('lbDel');
+    if (!e || !e.local || e.txid) return;
+    if (btn.textContent !== 'Tap again to remove') { btn.textContent = 'Tap again to remove'; return; }
+    await store.del(e.local.key);
+    const u = urls.get(e.id);
+    if (u) URL.revokeObjectURL(u.url);
+    urls.delete(e.id);
+    closePhoto();
+    loadPhotos();
+  };
 
   /* ---------- uploads ---------- */
 
   let queue = Promise.resolve();
   function addFiles(files) {
-    if (!canMint) return;
+    if (!wallet) return;
     for (const file of files) {
       if (!/^image\//.test(file.type) && !/\.(heic|heif)$/i.test(file.name)) continue;
       const li = document.createElement('li');
@@ -345,17 +447,17 @@
       li.querySelector('.jn').textContent = file.name || 'Photo';
       const st = li.querySelector('.js');
       $('jobs').prepend(li);
-      // One at a time, each its own approval: the wallet's repeat guard and the relay both prefer that.
+      // One at a time: each photo is one wallet call to seal its key.
       queue = queue.then(async () => {
         try {
-          const txid = await mint(wallet, file, (s) => { st.textContent = s; });
+          await upload(wallet, file, (s) => { st.textContent = s; });
           li.classList.add('ok');
-          st.innerHTML = `Minted · <a href="https://whatsonchain.com/tx/${esc(txid)}" target="_blank" rel="noopener">on chain</a>`;
-          setTimeout(() => { li.remove(); URL.revokeObjectURL(thumb); }, 8000);
+          st.textContent = 'Uploaded · on this device';
+          setTimeout(() => { li.remove(); URL.revokeObjectURL(thumb); }, 6000);
           loadPhotos();
         } catch (e) {
           li.classList.add('bad');
-          st.textContent = (e && e.message) || 'Not minted.';
+          st.textContent = (e && e.message) || 'Not uploaded.';
         }
       });
     }
@@ -382,8 +484,6 @@
     C.bindPrewarm?.(b); // wakes the wallet on hover, focus or touch, before the click
   });
   try { C.prewarmBwalletX?.(); } catch {}
-  $('addBtn').hidden = $('drop').hidden = !canMint;
-  $('soon').hidden = canMint;
   drawNav();
   if (remembered()) connect(true); // extension, in-app browser or a stored pairing: no new QR
 })();
