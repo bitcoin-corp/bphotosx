@@ -2,7 +2,7 @@
 
 bphotosx.com: the web face of bPics. Your photos, minted to your keys, private by default.
 
-Open source under the Open BSV License version 4 (see LICENSE and TRADEMARKS.md). Static HTML, no build, no server, no database. Connects bWalletX with `@bwalletx/connect` (global build) and
+Open source (MIT, see LICENSE and TRADEMARKS.md). Static HTML, no build, no server, no database. Connects bWalletX with `@bwalletx/connect` (global build) and
 mints through standard BRC-100 calls, so any BRC-100 wallet works.
 
 ## How a photo is minted
