@@ -108,8 +108,9 @@ footer{border-top:1px solid #121317;padding:40px 0 56px;color:var(--dim);font-si
 <section class="wrap vault" id="in" hidden>
   <div class="vhead">
     <div><h2>Your photos</h2><p id="count">Opening your wallet…</p></div>
-    <label class="btn btn-gold" for="pick">Add photos</label>
+    <label class="btn btn-gold" for="pick" id="addBtn">Add photos</label>
   </div>
+  <p class="empty" id="soon" hidden style="margin-bottom:24px">Minting opens soon. You’re connected and ready: when it opens, add photos here and they’re sealed to your keys.</p>
   <label class="drop" id="drop" for="pick">
     <input type="file" id="pick" accept="image/*" multiple>
     <strong>Drop photos here, or tap to choose</strong>

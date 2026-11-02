@@ -27,6 +27,12 @@
   const MAX_SEALED_BYTES = 2_000_000;
   const FEE_SAT_PER_BYTE = 0.1; // 100 sat/kB, the bMintX / NPG rate (bMarketX lib/mint.js)
   const SEEN = 'bphotosx.connected';
+  // Off until bWalletX handles big inscription txs on iPhone (bwalletx-x-25, 2 Nov 2026: the address sync and
+  // internalizeBeef unpack whole source txs at ~40x their size, and 200-700 KB inscriptions get the web view killed).
+  // `?mint=test` turns it on for this tab on a local preview only, for desktop testing.
+  const MINTING_OPEN = false;
+  const mintTest = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) && new URLSearchParams(location.search).get('mint') === 'test';
+  const canMint = MINTING_OPEN || mintTest;
 
   const enc = (s) => new TextEncoder().encode(s);
   const toHex = (a) => Array.from(a, (x) => x.toString(16).padStart(2, '0')).join('');
@@ -326,6 +332,7 @@
 
   let queue = Promise.resolve();
   function addFiles(files) {
+    if (!canMint) return;
     for (const file of files) {
       if (!/^image\//.test(file.type) && !/\.(heic|heif)$/i.test(file.name)) continue;
       const li = document.createElement('li');
@@ -369,6 +376,8 @@
     C.bindPrewarm?.(b); // wakes the wallet on hover, focus or touch, before the click
   });
   try { C.prewarmBwalletX?.(); } catch {}
+  $('addBtn').hidden = $('drop').hidden = !canMint;
+  $('soon').hidden = canMint;
   drawNav();
   if (remembered()) connect(true); // extension, in-app browser or a stored pairing: no new QR
 })();
