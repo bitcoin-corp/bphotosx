@@ -256,6 +256,7 @@
   function drawNav() {
     const on = !!identity;
     document.body.classList.toggle('signed-in', on);
+    route();
     $('navBtn').hidden = on;
     $('acct').hidden = !on;
     $('navBtn').textContent = 'Connect bWalletX';
@@ -275,13 +276,34 @@
     menu(false);
   }
 
+  // Two views while signed in: the front page (logo, "/") and your library ("#library").
+  const inLibrary = () => !!identity && location.hash === '#library';
+  function route() { document.body.classList.toggle('app-view', inLibrary()); }
+  function goLibrary() {
+    if (location.hash !== '#library') history.pushState(null, '', '#library');
+    route();
+    scrollTo({ top: 0 });
+  }
+  function goHome() {
+    if (location.hash) history.pushState(null, '', location.pathname + location.search);
+    route();
+    scrollTo({ top: 0 });
+  }
+  addEventListener('popstate', route);
+  addEventListener('hashchange', route);
+  document.querySelectorAll('a.xs-brand, .foot a.brand').forEach((a) => a.addEventListener('click', (e) => {
+    if (!identity) return;
+    e.preventDefault();
+    goHome();
+  }));
+
   const menu = (open) => {
     $('acctMenu').hidden = !open;
     $('acctBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
   };
   $('acctBtn').onclick = (e) => { e.stopPropagation(); menu($('acctMenu').hidden); };
   document.addEventListener('click', (e) => { if (!e.target.closest('#acct')) menu(false); });
-  $('menuLib').onclick = () => menu(false);
+  $('menuLib').onclick = (e) => { e.preventDefault(); menu(false); goLibrary(); };
   $('disconnectBtn').onclick = () => disconnect();
 
   // Before the wallet opens the first time: say what it will ask, and why.
@@ -316,7 +338,7 @@
       lookupName(identity).then((n) => { if (n && identity) { displayName = n; drawNav(); } });
       loadPhotos();
       if (!quiet) {
-        scrollTo({ top: 0, behavior: 'smooth' });
+        goLibrary();
         toast('Signed in with bWalletX. This is your private library.');
       }
     } catch (e) {
@@ -341,7 +363,9 @@
     $('grid').innerHTML = '';
     $('jobs').innerHTML = '';
     closePhoto();
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
     drawNav();
+    scrollTo({ top: 0 });
     toast('Disconnected. Your photos stay sealed.');
   }
 
@@ -583,7 +607,7 @@
     e.preventDefault();
     dragDepth = 0;
     $('dropzone').hidden = true;
-    $('library').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    goLibrary();
     addFiles([...e.dataTransfer.files]);
   });
 
@@ -595,7 +619,7 @@
     return;
   }
   connectButtons().forEach((b) => {
-    b.onclick = () => (identity ? $('library').scrollIntoView({ behavior: 'smooth', block: 'start' }) : connect(false));
+    b.onclick = () => (identity ? goLibrary() : connect(false));
     C.bindPrewarm?.(b); // wakes the wallet on hover, focus or touch, before the click
   });
   try { C.prewarmBwalletX?.(); } catch {}

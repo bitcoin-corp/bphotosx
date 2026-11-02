@@ -363,12 +363,16 @@ footer{padding:36px var(--pad) calc(40px + env(safe-area-inset-bottom));border-t
 .tile{position:relative}
 .tile .badge{position:absolute;left:6px;bottom:6px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.72);color:#e5e5e5;font:600 10px/1 var(--xs-hf);letter-spacing:.02em;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .tile .badge.on{background:var(--red);color:#0b1200}
-/* signed in: the page becomes your library (owner, 2 Nov 2026: "in my account") */
-body.signed-in .xs-top{min-height:0;border-bottom:1px solid var(--line)}
-body.signed-in .xs-top .xs-in,body.signed-in .rx-ghost,body.signed-in .rx-lb,body.signed-in .xs-credit,body.signed-in .xs-bg,body.signed-in .xs-links>a{display:none}
-body.signed-in .xs-top::before{display:none}
-body.signed-in .xs-cfs,body.signed-in .marq,body.signed-in #photos,body.signed-in #how,body.signed-in #status,body.signed-in #get,body.signed-in .dock{display:none}
-body.signed-in .lib{border-bottom:0;padding-top:clamp(28px,4vw,48px);min-height:calc(100svh - 160px)}
+/* signed in: two views. Home = the front page with your account in the nav; #library = the page becomes your library
+   (owner, 2 Nov 2026: "in my account", and the logo takes you back to the front page, still signed in) */
+body.app-view .xs-top{overflow:visible}
+body.signed-in .xs-top{z-index:30}
+body.app-view .xs-top{min-height:0;border-bottom:1px solid var(--line)}
+body.app-view .xs-top .xs-in,body.app-view .rx-ghost,body.app-view .rx-lb,body.app-view .xs-credit,body.app-view .xs-bg,body.app-view .xs-links>a{display:none}
+body.app-view .xs-top::before{display:none}
+body.app-view .xs-cfs,body.app-view .marq,body.app-view #photos,body.app-view #how,body.app-view #status,body.app-view #get,body.app-view .dock{display:none}
+body.app-view .lib{border-bottom:0;padding-top:clamp(28px,4vw,48px);min-height:calc(100svh - 160px)}
+body.signed-in .xs-nav{z-index:20}
 body.pv-open{overflow:hidden}
 /* account chip */
 .acct{position:relative}
