@@ -195,21 +195,22 @@
 
   let wallet = null, identity = null;
   const STATUS = { finding: 'Opening your wallet…', opening: 'Approve in bWalletX…', signing: 'Approve in bWalletX…', pairing: 'Scan the QR…' };
-  const buttons = () => [$('navBtn'), $('heroBtn')];
+  const buttons = () => [$('navBtn'), $('heroBtn'), $('libBtn')];
   const label = (t) => buttons().forEach((b) => { b.textContent = t; });
 
   function drawNav() {
     const nav = $('navBtn');
     if (identity) {
-      nav.className = 'btn btn-ghost btn-sm who';
-      nav.innerHTML = `<span class="dot" style="color:var(--gold-hi)"></span><span class="who-key">${esc(short(identity))}</span><span>Disconnect</span>`;
+      nav.className = 'xs-btn xs-ghost who';
+      nav.innerHTML = `<span class="dot"></span><span class="who-key">${esc(short(identity))}</span><span>Disconnect</span>`;
       nav.title = 'Connected to bWalletX. Click to disconnect.';
     } else {
-      nav.className = 'btn btn-gold btn-sm';
+      nav.className = 'xs-btn xs-gold';
       nav.textContent = 'Connect bWalletX';
       nav.title = '';
     }
-    $('heroBtn').textContent = 'Connect bWalletX';
+    $('heroBtn').textContent = 'Open your library';
+    $('libBtn').textContent = 'Connect bWalletX';
     $('out').hidden = !!identity;
     $('in').hidden = !identity;
   }
@@ -228,6 +229,7 @@
       remember(true);
       drawNav();
       loadPhotos();
+      if (!quiet) $('library').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
       wallet = identity = null;
       if (!quiet) {
@@ -372,7 +374,11 @@
     return;
   }
   buttons().forEach((b) => {
-    b.onclick = () => (b.id === 'navBtn' && identity ? disconnect() : connect(false));
+    b.onclick = () => {
+      if (!identity) return connect(false);
+      if (b.id === 'navBtn') return disconnect();
+      $('library').scrollIntoView({ behavior: 'smooth', block: 'start' }); // already connected: go to the library
+    };
     C.bindPrewarm?.(b); // wakes the wallet on hover, focus or touch, before the click
   });
   try { C.prewarmBwalletX?.(); } catch {}

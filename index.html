@@ -2,133 +2,136 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>bPhotosX · Your photos, minted privately</title>
-<meta name="description" content="bPhotosX: The photos you take, minted to your keys. Private by default. Part of bWalletX.">
+<meta name="description" content="bPhotosX: your photographs, private to your bWalletX. Keep family albums, edit your shots, and sell or license the ones you choose. Part of bWalletX.">
 <link rel="canonical" href="https://bphotosx.com/">
 <meta property="og:type" content="website"><meta property="og:url" content="https://bphotosx.com/">
-<meta property="og:site_name" content="bPhotosX"><meta property="og:title" content="bPhotosX · Your photos, minted privately"><meta property="og:description" content="bPhotosX: The photos you take, minted to your keys. Private by default. Part of bWalletX.">
+<meta property="og:site_name" content="bPhotosX"><meta property="og:title" content="bPhotosX · Your photos, minted privately"><meta property="og:description" content="Your photographs, private to your bWalletX. Sell or license the ones you choose.">
 <meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" as="image" href="/media/stock/hero.jpg" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#000;--ink:#f4f1e8;--muted:#a9a69c;--dim:#7c7a73;--gold:#f5b800;--gold-hi:#ffd24d;--card:#0d0e11;--edge:#1f2127;--bad:#ff8a7a;--ok:#9fd67a;--grad:linear-gradient(180deg,#ffe58a,#ffd24d 55%,#c98f00);--hf:'Space Grotesk',system-ui,sans-serif;--bf:'IBM Plex Sans',system-ui,sans-serif;--ease:cubic-bezier(.2,.8,.2,1)}
-*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}html,body{overflow-x:clip}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--bf);min-height:100vh;display:flex;flex-direction:column}
-a{color:var(--gold-hi);text-underline-offset:3px}a:focus-visible,button:focus-visible,label:focus-within{outline:2px solid var(--gold-hi);outline-offset:3px;border-radius:8px}
-[hidden]{display:none!important}
-.wrap{max-width:1120px;margin:0 auto;padding:0 16px;width:100%}h1,h2,h3{font-family:var(--hf);letter-spacing:-.03em;margin:0}
-.gx{color:var(--gold-hi)}
-.nav{display:flex;align-items:center;justify-content:space-between;gap:12px;height:68px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font:700 21px/1 var(--hf);letter-spacing:-.02em}.brand img{display:block}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 22px;border-radius:999px;border:0;cursor:pointer;font:600 16px/1 var(--hf);text-decoration:none;transition:transform .16s var(--ease),border-color .16s}
-.btn-gold{background:var(--grad);color:#000;box-shadow:0 0 0 1px rgba(255,210,77,.35),0 10px 30px -10px rgba(245,184,0,.6),inset 0 1px 0 rgba(255,255,255,.5)}.btn-gold:hover{transform:translateY(-1px)}
-.btn-ghost{background:none;color:var(--ink);border:1px solid var(--edge)}.btn-ghost:hover{border-color:rgba(255,210,77,.35)}
-.btn:disabled{opacity:.55;cursor:default;transform:none}
-.btn-sm{height:40px;padding:0 16px;font-size:15px}
-main{flex:1}
-.hero{padding:72px 16px 64px;position:relative}
-.hero::before{content:"";position:absolute;inset:0 30% 20% -10%;z-index:-1;background:radial-gradient(closest-side,rgba(245,184,0,.12),transparent 70%)}
-.eyebrow{font:500 13px/1 var(--hf);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 20px}
-.hero h1{font-size:clamp(52px,10vw,112px);line-height:.95;letter-spacing:-.045em}
-.lede{font-size:20px;color:var(--muted);max-width:560px;margin:24px 0 32px}
-.ctas{display:flex;flex-wrap:wrap;gap:12px}
-.err{color:var(--bad);margin:16px 0 0;font-size:15px}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;padding-bottom:96px}
-.step{background:var(--card);border:1px solid var(--edge);border-radius:20px;padding:24px}
-.step b{display:block;font:600 13px/1 var(--hf);letter-spacing:.14em;color:var(--gold-hi);margin-bottom:14px}
-.step h3{font-size:20px;margin-bottom:8px}.step p{margin:0;color:var(--muted);font-size:15px}
-/* vault */
-.vault{padding:40px 16px 96px}
-.vhead{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:16px;margin-bottom:24px}
-.vhead h2{font-size:clamp(32px,5vw,48px)}.vhead p{margin:6px 0 0;color:var(--muted);font-size:15px}
-.drop{display:block;border:1.5px dashed #3a3830;border-radius:20px;padding:32px 20px;text-align:center;color:var(--muted);cursor:pointer;transition:border-color .16s,background .16s;margin-bottom:24px}
-.drop:hover,.drop.over{border-color:var(--gold-hi);background:rgba(255,210,77,.04)}
-.drop strong{display:block;color:var(--ink);font:600 18px/1.3 var(--hf);margin-bottom:4px}
-.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.jobs{list-style:none;margin:0 0 24px;padding:0;display:grid;gap:8px}
-.job{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:10px 14px;font-size:14px}
-.job img{width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none}
-.job .jn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.job .js{color:var(--muted);white-space:nowrap}.job.ok .js{color:var(--ok)}.job.bad .js{color:var(--bad);white-space:normal}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
-.tile{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--card);border:1px solid var(--edge);padding:0;cursor:pointer}
-.tile img{width:100%;height:100%;object-fit:cover;display:block}
-.tile.locked{display:grid;place-items:center;color:var(--dim);font-size:13px;cursor:default}
-.empty{color:var(--muted);text-align:center;padding:48px 16px;border:1px solid var(--edge);border-radius:20px}
-.note{margin-top:32px;color:var(--dim);font-size:14px;max-width:720px}
-/* lightbox */
-.lb{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;flex-direction:column}
-.lb-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;color:var(--muted);font-size:14px}
-.lb-top .lb-meta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lb-acts{display:flex;gap:8px;flex:none}
-.lb-img{flex:1;min-height:0;display:grid;place-items:center;padding:0 16px 16px}
-.lb-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
-footer{border-top:1px solid #121317;padding:40px 0 56px;color:var(--dim);font-size:14px}
-.foot{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between;align-items:center}
-.foot nav{display:flex;flex-wrap:wrap;gap:18px}.foot nav a{color:var(--muted);text-decoration:none}.foot nav a:hover{color:var(--ink)}
-.bwx-strip{background:#0a0a0b;border-bottom:1px solid rgba(255,210,77,.16);font:500 13px/1 'IBM Plex Sans',system-ui,-apple-system,sans-serif}
-.bwx-strip a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 16px;color:#cfcabd;text-decoration:none;letter-spacing:.01em}
-.bwx-strip svg{width:12px;height:16px;flex:none;display:block}.bwx-strip b{color:#ffd24d;font-weight:600}
-.bwx-strip .bwx-go{color:#7c7a73;transition:transform .16s cubic-bezier(.2,.8,.2,1),color .16s}
-.bwx-strip a:hover{color:#f4f1e8}.bwx-strip a:hover .bwx-go{color:#ffd24d;transform:translateX(2px)}
-.bwx-strip a:focus-visible{outline:2px solid #ffd24d;outline-offset:-4px;border-radius:8px}
-.who{display:inline-flex;align-items:center;gap:8px}
-.who .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
-@media (max-width:520px){.nav .who-key{display:none}.grid{grid-template-columns:repeat(3,1fr);gap:4px}.tile{border-radius:6px}}
-@media (prefers-reduced-motion:reduce){.btn,.bwx-strip .bwx-go,.drop{transition:none}}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/shell.css">
 </head>
 <body>
-<aside class="bwx-strip" aria-label="bWalletX"><a href="https://bwalletx.com"><svg viewBox="23 8 74 100" aria-hidden="true" focusable="false"><defs><linearGradient id="bwx-g" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="105"><stop offset="0" stop-color="#FFE58A"/><stop offset=".55" stop-color="#FFD24D"/><stop offset="1" stop-color="#C98F00"/></linearGradient><mask id="bwx-m"><rect width="140" height="140" fill="#fff"/><circle cx="60" cy="72" r="15" fill="#000"/></mask></defs><g fill="url(#bwx-g)" mask="url(#bwx-m)"><polygon points="45,12 45,76 27,76 27,30"/><circle cx="60" cy="72" r="33"/></g></svg><span>Part of <b>bWalletX</b></span><span class="bwx-go" aria-hidden="true">&rarr;</span></a></aside>
-<header class="wrap nav">
-  <a class="brand" href="/" aria-label="bPhotosX home"><img src="/logo.svg" alt="" width="22" height="30"><span>bPhotos<span class="gx">X</span></span></a>
-  <button class="btn btn-gold btn-sm" id="navBtn" type="button">Connect bWalletX</button>
-</header>
+<aside class="xs-strip" aria-label="bWalletX"><a href="https://bwalletx.com"><svg viewBox="23 8 74 100" aria-hidden="true" focusable="false"><defs><linearGradient id="xs-sg" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="105"><stop offset="0" stop-color="#FFE58A"/><stop offset=".55" stop-color="#FFD24D"/><stop offset="1" stop-color="#C98F00"/></linearGradient></defs><path fill="url(#xs-sg)" d="M45 12V72H27V30Z M27 72a33 33 0 1 1 66 0a33 33 0 1 1-66 0Z M45 72a15 15 0 1 0 30 0a15 15 0 1 0-30 0Z"/></svg><span>Part of <b>bWalletX</b></span><span class="xs-go" aria-hidden="true">&rarr;</span></a></aside>
+
 <main>
-<div id="out">
-  <section class="wrap hero">
-    <p class="eyebrow">bphotosx.com</p>
-    <h1>bPhotos<span class="gx">X</span></h1>
-    <p class="lede">The photos you take, minted to your keys. Private by default.</p>
-    <div class="ctas">
-      <button class="btn btn-gold" id="heroBtn" type="button">Connect bWalletX</button>
-      <a class="btn btn-ghost" href="https://bwalletx.com/get">Get bWalletX</a>
-    </div>
-    <p class="err" id="connErr" hidden></p>
-  </section>
-  <section class="wrap steps" aria-label="How it works">
-    <div class="step"><b>01</b><h3>Pick a photo</h3><p>From your camera roll or your camera. Location data is taken out before anything else happens.</p></div>
-    <div class="step"><b>02</b><h3>Sealed on your device</h3><p>The photo is encrypted in your browser. Only your bWalletX keys can open it again.</p></div>
-    <div class="step"><b>03</b><h3>Minted to your keys</h3><p>The sealed photo is written to Bitcoin and held in your own wallet, with a blurred preview in Wallet › NFTs. Your wallet shows the fee and asks you first.</p></div>
-  </section>
-</div>
-<section class="wrap vault" id="in" hidden>
-  <div class="vhead">
-    <div><h2>Your photos</h2><p id="count">Opening your wallet…</p></div>
-    <label class="btn btn-gold" for="pick" id="addBtn">Add photos</label>
+<section class="xs-top" id="top" aria-labelledby="xs-h1">
+  <img class="xs-bg" src="/media/stock/hero.jpg" alt="" aria-hidden="true">
+  <header class="xs-wrap xs-nav"><a class="xs-brand" href="/" aria-label="bPhotosX home"><svg viewBox="23 8 74 100" aria-hidden="true" focusable="false"><path fill="currentColor" d="M45 12V72H27V30Z M27 72a33 33 0 1 1 66 0a33 33 0 1 1-66 0Z M45 72a15 15 0 1 0 30 0a15 15 0 1 0-30 0Z"/></svg><span><span class="xs-sr">b</span><span class="xs-nm">Photos</span><i>X</i></span></a><nav class="xs-links" aria-label="Main"><a href="#photos">Browse</a><a class="xs-hs" href="#library">Your library</a><a class="xs-hs" href="#how">For photographers</a><button class="xs-btn xs-gold" id="navBtn" type="button">Connect bWalletX</button></nav></header>
+  <div class="xs-wrap xs-in"><h1 class="xs-h1" id="xs-h1"><svg class="xs-hb" viewBox="23 8 74 100" aria-hidden="true" focusable="false"><path fill="currentColor" d="M45 12V72H27V30Z M27 72a33 33 0 1 1 66 0a33 33 0 1 1-66 0Z M45 72a15 15 0 1 0 30 0a15 15 0 1 0-30 0Z"/></svg><span class="xs-sr">b</span><span class="xs-nm rx-g">PhotosX</span></h1><p class="xs-lede">Your photographs, private to your wallet. Keep the family albums, and sell or license the shots you choose.</p><div class="xs-ctas"><a class="xs-btn xs-ghost" href="#photos">Browse</a><button class="xs-btn xs-gold" id="heroBtn" type="button">Open your library</button></div><p class="err" id="connErr" hidden></p></div>
+  <div class="rx-ghost" aria-hidden="true">PHOTOSX</div><div class="rx-lb" aria-hidden="true"></div>
+  <a class="xs-credit" href="https://unsplash.com/photos/baRYCsjO6z4" target="_blank" rel="noopener">Photo: Jennifer Trovato / Unsplash</a>
+</section>
+
+<section class="cfs xs-cfs" aria-labelledby="cf-top-h">
+  <p class="xs-kick" id="cf-top-h">Example photographs &middot; swipe</p>
+  <div class="cf" id="cf" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Example photographs"></div>
+  <div class="cf-nav">
+    <button class="arrow" id="cfPrev" type="button" aria-label="Previous photo">&larr;</button>
+    <div class="dots" id="cfDots" role="group" aria-label="Choose a photo"></div>
+    <button class="arrow" id="cfNext" type="button" aria-label="Next photo">&rarr;</button>
   </div>
-  <p class="empty" id="soon" hidden style="margin-bottom:24px">Minting opens soon. You’re connected and ready: when it opens, add photos here and they’re sealed to your keys.</p>
-  <label class="drop" id="drop" for="pick">
-    <input type="file" id="pick" accept="image/*" multiple>
-    <strong>Drop photos here, or tap to choose</strong>
-    Each photo is resized to 1600 px, stripped of location data, encrypted on this device, then minted to your keys. A blurred preview goes into Wallet › NFTs.
-  </label>
-  <ul class="jobs" id="jobs"></ul>
-  <div class="grid" id="grid"></div>
-  <p class="note">What goes on chain is ciphertext plus a blurred preview: anyone can see that a photo exists, its size and the blur, nobody can see the photo. Each photo has its own key, derived from your wallet. Keep your bWalletX backup safe, because without it these photos can't be opened.</p>
+</section>
+
+<div class="marq" aria-hidden="true"><div class="mtrack"><div class="mset"><span>Family albums</span><i></i><span>Weddings</span><i></i><span>Portraits</span><i></i><span>Model shoots</span><i></i><span>Street</span><i></i><span>Landscapes</span><i></i><span>Pets</span><i></i><span>Still life</span><i></i><span>Events</span><i></i><span>Travel</span><i></i></div><div class="mset"><span>Family albums</span><i></i><span>Weddings</span><i></i><span>Portraits</span><i></i><span>Model shoots</span><i></i><span>Street</span><i></i><span>Landscapes</span><i></i><span>Pets</span><i></i><span>Still life</span><i></i><span>Events</span><i></i><span>Travel</span><i></i></div></div></div>
+
+<section class="sec lib" id="library" aria-labelledby="lib-h">
+  <div class="xs-cat"><p class="xs-eye">Your library</p><h2 id="lib-h">Private to <i>your wallet.</i></h2><p class="xs-sub">Every photo is encrypted on your device before it goes anywhere. Only your bWalletX can open it again.</p></div>
+  <div class="lib-out" id="out"><p><b>Connect bWalletX to open your library.</b> Nothing about your photos is visible to us, or to anyone else, without your wallet.</p><button class="xs-btn xs-gold" id="libBtn" type="button">Connect bWalletX</button></div>
+  <div class="lib-in" id="in" hidden>
+    <div class="vhead"><p id="count">Opening your wallet…</p><label class="xs-btn xs-gold" for="pick" id="addBtn">Add photos</label></div>
+    <p class="soon" id="soon" hidden>Adding photos opens soon. You’re connected and ready: when it opens, add photos here and they’re sealed to your keys.</p>
+    <label class="drop" id="drop" for="pick">
+      <input type="file" id="pick" accept="image/*" multiple>
+      <strong>Drop photos here, or tap to choose</strong>
+      Each photo is resized to 1600 px, stripped of location data, encrypted on this device, then kept with your keys.
+    </label>
+    <ul class="jobs" id="jobs"></ul>
+    <div class="grid" id="grid"></div>
+    <p class="note"><span><b>We never see your photos.</b> What leaves your device is ciphertext. Each photo has its own key, and your wallet holds it. Keep your bWalletX backup safe: without it these photos can’t be opened.</span></p>
+  </div>
+</section>
+
+<section class="sec" id="photos" aria-labelledby="photos-h">
+  <div class="xs-cat"><p class="xs-eye">Examples</p><h2 id="photos-h">Coming to <i>bPhotosX.</i></h2><p class="xs-sub">Example photographs from Unsplash, shown until our first photographers join. Real photographs, sold and licensed by the people who took them, go here.</p></div>
+  <div class="rail-wrap" data-rail>
+    <div class="rail-h"><h3>People and family</h3>
+      <div class="arrows"><button type="button" data-dir="-1" aria-label="Scroll people and family left"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" data-dir="1" aria-label="Scroll people and family right"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+    </div>
+    <ul class="rail" tabindex="0" role="list" aria-label="People and family, scrolls sideways"><li><a class="card" href="https://unsplash.com/photos/AHBiSKaENwc" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/64.jpg" width="600" height="800" alt="Example photo by Alexander Shustov" loading="lazy" decoding="async"></div><b>Alexander Shustov</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/2FrX56QL7P8" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/65.jpg" width="600" height="800" alt="Example photo by Alexander Shustov" loading="lazy" decoding="async"></div><b>Alexander Shustov</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/A88emaZe7d8" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/129.jpg" width="600" height="800" alt="Example photo by Charlie Foster" loading="lazy" decoding="async"></div><b>Charlie Foster</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/PFZTiiJnjag" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/203.jpg" width="600" height="800" alt="Example photo by Diogo Tavares" loading="lazy" decoding="async"></div><b>Diogo Tavares</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/8wTPqxlnKM4" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/237.jpg" width="600" height="800" alt="Example photo by André Spieker" loading="lazy" decoding="async"></div><b>André Spieker</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/BjelfpszQDw" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/169.jpg" width="600" height="800" alt="Example photo by Noel Lopez" loading="lazy" decoding="async"></div><b>Noel Lopez</b><span>Example &middot; Unsplash</span></a></li></ul>
+  </div>
+  <div class="rail-wrap" data-rail>
+    <div class="rail-h"><h3>Places</h3>
+      <div class="arrows"><button type="button" data-dir="-1" aria-label="Scroll places left"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" data-dir="1" aria-label="Scroll places right"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+    </div>
+    <ul class="rail" tabindex="0" role="list" aria-label="Places, scrolls sideways"><li><a class="card" href="https://unsplash.com/photos/agkblvPff5U" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/164.jpg" width="600" height="800" alt="Example photo by Linh Nguyen" loading="lazy" decoding="async"></div><b>Linh Nguyen</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/SyBYM8R6VU4" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/57.jpg" width="600" height="800" alt="Example photo by Nicholas Swanson" loading="lazy" decoding="async"></div><b>Nicholas Swanson</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/IoCWq07GaG4" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/43.jpg" width="600" height="800" alt="Example photo by Oleg Chursin" loading="lazy" decoding="async"></div><b>Oleg Chursin</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/h7rOzTmGxWE" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/274.jpg" width="600" height="800" alt="Example photo by Wojtek Witkowski" loading="lazy" decoding="async"></div><b>Wojtek Witkowski</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/hfIheOEJp9M" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/259.jpg" width="600" height="800" alt="Example photo by Namphuong Van" loading="lazy" decoding="async"></div><b>Namphuong Van</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/t05kfHeygbE" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/195.jpg" width="600" height="800" alt="Example photo by Matthew Skinner" loading="lazy" decoding="async"></div><b>Matthew Skinner</b><span>Example &middot; Unsplash</span></a></li></ul>
+  </div>
+  <div class="rail-wrap" data-rail>
+    <div class="rail-h"><h3>Nature</h3>
+      <div class="arrows"><button type="button" data-dir="-1" aria-label="Scroll nature left"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" data-dir="1" aria-label="Scroll nature right"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+    </div>
+    <ul class="rail" tabindex="0" role="list" aria-label="Nature, scrolls sideways"><li><a class="card" href="https://unsplash.com/photos/TI-B-TNYJMU" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/235.jpg" width="600" height="800" alt="Example photo by Paul E. Harrer" loading="lazy" decoding="async"></div><b>Paul E. Harrer</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/c54ZhWDLEDo" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/287.jpg" width="600" height="800" alt="Example photo by Aleksandra Boguslawska" loading="lazy" decoding="async"></div><b>Aleksandra Boguslawska</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/NYDo21ssGao" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/15.jpg" width="600" height="800" alt="Example photo by Paul Jarvis" loading="lazy" decoding="async"></div><b>Paul Jarvis</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/V0yAek6BgGk" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/29.jpg" width="600" height="800" alt="Example photo by Go Wild" loading="lazy" decoding="async"></div><b>Go Wild</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/wSb8d-ke5-4" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/200.jpg" width="600" height="800" alt="Example photo by Elias Carlsson" loading="lazy" decoding="async"></div><b>Elias Carlsson</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/Y-eIZ3g8_ko" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/244.jpg" width="600" height="800" alt="Example photo by Yair Hazout" loading="lazy" decoding="async"></div><b>Yair Hazout</b><span>Example &middot; Unsplash</span></a></li></ul>
+  </div>
+  <div class="rail-wrap" data-rail>
+    <div class="rail-h"><h3>Still life</h3>
+      <div class="arrows"><button type="button" data-dir="-1" aria-label="Scroll still life left"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" data-dir="1" aria-label="Scroll still life right"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+    </div>
+    <ul class="rail" tabindex="0" role="list" aria-label="Still life, scrolls sideways"><li><a class="card" href="https://unsplash.com/photos/irUQaBK3ydI" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/250.jpg" width="600" height="800" alt="Example photo by Nicola Perantoni" loading="lazy" decoding="async"></div><b>Nicola Perantoni</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/RQHzRELE2Ss" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/312.jpg" width="600" height="800" alt="Example photo by Sonja Langford" loading="lazy" decoding="async"></div><b>Sonja Langford</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/hGO27G5tZJ8" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/225.jpg" width="600" height="800" alt="Example photo by Vee O" loading="lazy" decoding="async"></div><b>Vee O</b><span>Example &middot; Unsplash</span></a></li><li><a class="card" href="https://unsplash.com/photos/hv1MrBzGGNY" target="_blank" rel="noopener"><div class="p"><img src="/media/stock/292.jpg" width="600" height="800" alt="Example photo by Webvilla" loading="lazy" decoding="async"></div><b>Webvilla</b><span>Example &middot; Unsplash</span></a></li></ul>
+  </div>
+  <p class="credits">Example photographs from <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash</a>, by <a href="https://unsplash.com/photos/c54ZhWDLEDo" target="_blank" rel="noopener">Aleksandra Boguslawska</a>, <a href="https://unsplash.com/photos/2FrX56QL7P8" target="_blank" rel="noopener">Alexander Shustov</a>, <a href="https://unsplash.com/photos/8wTPqxlnKM4" target="_blank" rel="noopener">André Spieker</a>, <a href="https://unsplash.com/photos/A88emaZe7d8" target="_blank" rel="noopener">Charlie Foster</a>, <a href="https://unsplash.com/photos/PFZTiiJnjag" target="_blank" rel="noopener">Diogo Tavares</a>, <a href="https://unsplash.com/photos/wSb8d-ke5-4" target="_blank" rel="noopener">Elias Carlsson</a>, <a href="https://unsplash.com/photos/V0yAek6BgGk" target="_blank" rel="noopener">Go Wild</a>, <a href="https://unsplash.com/photos/baRYCsjO6z4" target="_blank" rel="noopener">Jennifer Trovato</a>, <a href="https://unsplash.com/photos/agkblvPff5U" target="_blank" rel="noopener">Linh Nguyen</a>, <a href="https://unsplash.com/photos/t05kfHeygbE" target="_blank" rel="noopener">Matthew Skinner</a>, <a href="https://unsplash.com/photos/hfIheOEJp9M" target="_blank" rel="noopener">Namphuong Van</a>, <a href="https://unsplash.com/photos/SyBYM8R6VU4" target="_blank" rel="noopener">Nicholas Swanson</a>, <a href="https://unsplash.com/photos/irUQaBK3ydI" target="_blank" rel="noopener">Nicola Perantoni</a>, <a href="https://unsplash.com/photos/BjelfpszQDw" target="_blank" rel="noopener">Noel Lopez</a>, <a href="https://unsplash.com/photos/IoCWq07GaG4" target="_blank" rel="noopener">Oleg Chursin</a>, <a href="https://unsplash.com/photos/TI-B-TNYJMU" target="_blank" rel="noopener">Paul E. Harrer</a>, <a href="https://unsplash.com/photos/NYDo21ssGao" target="_blank" rel="noopener">Paul Jarvis</a>, <a href="https://unsplash.com/photos/RQHzRELE2Ss" target="_blank" rel="noopener">Sonja Langford</a>, <a href="https://unsplash.com/photos/hGO27G5tZJ8" target="_blank" rel="noopener">Vee O</a>, <a href="https://unsplash.com/photos/hv1MrBzGGNY" target="_blank" rel="noopener">Webvilla</a>, <a href="https://unsplash.com/photos/h7rOzTmGxWE" target="_blank" rel="noopener">Wojtek Witkowski</a>, <a href="https://unsplash.com/photos/Y-eIZ3g8_ko" target="_blank" rel="noopener">Yair Hazout</a>. They are not for sale here.</p>
+</section>
+
+<section class="sec how" id="how" aria-labelledby="how-h">
+  <div class="head"><div><span class="kick mono rv">For photographers</span><h2 id="how-h" class="rv">Your photos, <span>your keys.</span></h2><p class="sub rv">From the family album to a paid shoot, you decide who sees what.</p></div></div>
+  <ol class="steps">
+    <li class="rv st-i"><span class="n" aria-hidden="true">1</span><h3>Add your photos</h3><p>From your camera roll or your camera. Location data comes out before anything else happens.</p><span class="s">Live</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">2</span><h3>Sealed on your device</h3><p>Each photo is encrypted in your browser with its own key, and your bWalletX holds that key.</p><span class="s">Live</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">3</span><h3>Your library, anywhere</h3><p>Albums kept encrypted in bDriveX, and opened on any device where you have your wallet.</p><span class="s">Next</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">4</span><h3>Sell or license</h3><p>Set a price for personal or commercial use. The buyer’s wallet gets the key, and you’re paid directly.</p><span class="s">Next</span></li>
+  </ol>
+  <p class="note"><span><b>Nothing goes public unless you choose.</b> Your library stays encrypted. A photo you list for sale is checked before it appears, so the market stays safe.</span></p>
+</section>
+
+<section class="status" id="status" aria-labelledby="st-h">
+  <h2 class="sr" id="st-h">Status</h2>
+  <div class="st">
+    <div><h3 class="mono"><i></i>Live today</h3>
+      <ul><li><b>bWalletX</b>, your own wallet, on web, iPhone, Android, desktop and Chrome.</li><li><b>Your private library</b> on bphotosx.com: connect, and your photos open only for you.</li><li><b>Encryption on your device</b>, with keys held by your wallet.</li></ul></div>
+    <div class="nx"><h3 class="mono"><i></i>Next</h3>
+      <ul><li><b>Adding photos</b>, once the bWalletX phone update is out.</li><li><b>Albums in bDriveX</b>, on every device you use.</li><li><b>Sell and license your photos</b>, paid straight to you.</li><li><b>Edit with b</b>, our wallet agent, in the bPhotosX Studio.</li></ul></div>
+  </div>
+</section>
+
+<section class="sec cta" id="get" aria-labelledby="get-h">
+  <div class="cta-in">
+    <h2 id="get-h" class="rv"><span>Start with</span>the wallet.</h2>
+    <p>Your photos, keys and identity live in bWalletX. Free on the web, phone, desktop and Chrome.</p>
+    <div class="ctas"><a class="btn btn-gold" href="https://bwalletx.com/get">Get bWalletX</a><a class="btn btn-glass" href="#library">Open your library</a></div>
+  </div>
 </section>
 </main>
+
+<footer>
+  <div class="foot">
+    <a class="brand" href="/" aria-label="bPhotosX home"><svg viewBox="23 8 74 100" aria-hidden="true" focusable="false" style="color:#F5B800"><path fill="currentColor" d="M45 12V72H27V30Z M27 72a33 33 0 1 1 66 0a33 33 0 1 1-66 0Z M45 72a15 15 0 1 0 30 0a15 15 0 1 0-30 0Z"/></svg><span>bPhotos<span class="red">X</span></span></a>
+    <nav aria-label="Footer"><a href="https://bwalletx.com/family">Part of the bWalletX family</a><a href="https://bwalletx.com">bWalletX</a><a href="https://bdrivex.com">bDriveX</a><a href="https://github.com/bitcoin-corp/bphotosx">Open source</a></nav>
+  </div>
+</footer>
+
+<div class="dock" id="dock"><a class="btn btn-gold" href="https://bwalletx.com/get">Get bWalletX</a></div>
+
 <div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Photo">
-  <div class="lb-top"><span class="lb-meta" id="lbMeta"></span><span class="lb-acts"><a class="btn btn-ghost btn-sm" id="lbSave" download>Save</a><a class="btn btn-ghost btn-sm" id="lbTx" target="_blank" rel="noopener">On chain</a><button class="btn btn-ghost btn-sm" id="lbX" type="button" aria-label="Close">Close</button></span></div>
+  <div class="lb-top"><span class="lb-meta" id="lbMeta"></span><span class="lb-acts"><a class="xs-btn xs-ghost" id="lbSave" download>Save</a><a class="xs-btn xs-ghost" id="lbTx" target="_blank" rel="noopener">On chain</a><button class="xs-btn xs-ghost" id="lbX" type="button" aria-label="Close">Close</button></span></div>
   <div class="lb-img"><img id="lbImg" alt=""></div>
 </div>
-<footer class="wrap foot">
-  <a class="brand" href="/"><img src="/logo.svg" alt="" width="18" height="24"><span>bPhotos<span class="gx">X</span></span></a>
-  <nav><a href="https://bwalletx.com">bWalletX</a><a href="https://bwalletx.com/family">The family</a><a href="https://bchatx.com">bChatX</a><a href="https://bmarketx.com">bMarketX</a></nav>
-</footer>
+
+<script src="/site.js"></script>
 <script src="https://unpkg.com/@bwalletx/connect@0.5.4/dist/bwalletx-connect.global.js"></script>
 <script src="https://unpkg.com/@bsv/sdk@2.8.10/dist/umd/bundle.js"></script>
 <script src="/app.js"></script>
