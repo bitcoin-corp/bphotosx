@@ -228,33 +228,80 @@
     };
   })();
 
-  /* ---------- wallet ---------- */
+  /* ---------- wallet and account ---------- */
 
-  let wallet = null, identity = null;
+  let wallet = null, identity = null, displayName = '';
   const STATUS = { finding: 'Opening your wallet…', opening: 'Approve in bWalletX…', signing: 'Approve in bWalletX…', pairing: 'Scan the QR…' };
-  const buttons = () => [$('navBtn'), $('heroBtn'), $('libBtn')];
-  const label = (t) => buttons().forEach((b) => { b.textContent = t; });
+  const connectButtons = () => [$('navBtn'), $('heroBtn'), $('libBtn')];
+  const label = (t) => connectButtons().forEach((b) => { b.textContent = t; });
+  const PAYMAIL_API = 'https://pay.bwallet.space/api/paymail/lookup';
+  const flag = (k, v) => { try { if (v === undefined) return localStorage.getItem(k) === '1'; localStorage.setItem(k, '1'); } catch {} return false; };
+
+  async function lookupName(key) {
+    try {
+      const r = await fetch(`${PAYMAIL_API}?key=${encodeURIComponent(key)}`);
+      const j = r.ok ? await r.json() : null;
+      return typeof j?.paymail === 'string' ? j.paymail : '';
+    } catch { return ''; }
+  }
+
+  function toast(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => { t.hidden = true; }, 4200);
+  }
 
   function drawNav() {
-    const nav = $('navBtn');
-    if (identity) {
-      nav.className = 'xs-btn xs-ghost who';
-      nav.innerHTML = `<span class="dot"></span><span class="who-key">${esc(short(identity))}</span><span>Disconnect</span>`;
-      nav.title = 'Connected to bWalletX. Click to disconnect.';
-    } else {
-      nav.className = 'xs-btn xs-gold';
-      nav.textContent = 'Connect bWalletX';
-      nav.title = '';
-    }
+    const on = !!identity;
+    document.body.classList.toggle('signed-in', on);
+    $('navBtn').hidden = on;
+    $('acct').hidden = !on;
+    $('navBtn').textContent = 'Connect bWalletX';
     $('heroBtn').textContent = 'Open your library';
     $('libBtn').textContent = 'Connect bWalletX';
-    $('out').hidden = !!identity;
-    $('in').hidden = !identity;
+    $('out').hidden = on;
+    $('libHead').hidden = on;
+    $('in').hidden = !on;
+    if (on) {
+      const name = displayName || short(identity);
+      $('acctName').textContent = name;
+      $('libName').textContent = name;
+      $('acctAv').textContent = (displayName ? displayName[0] : 'b').toUpperCase();
+      $('acctKey').textContent = short(identity);
+      $('acctKey').title = identity;
+    }
+    menu(false);
+  }
+
+  const menu = (open) => {
+    $('acctMenu').hidden = !open;
+    $('acctBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  $('acctBtn').onclick = (e) => { e.stopPropagation(); menu($('acctMenu').hidden); };
+  document.addEventListener('click', (e) => { if (!e.target.closest('#acct')) menu(false); });
+  $('menuLib').onclick = () => menu(false);
+  $('disconnectBtn').onclick = () => disconnect();
+
+  // Before the wallet opens the first time: say what it will ask, and why.
+  function explainFirst() {
+    if (flag('bphotosx.explained')) return Promise.resolve(true);
+    return new Promise((res) => {
+      const sh = $('connectSheet');
+      sh.hidden = false;
+      $('sheetGo').focus();
+      const done = (ok) => { sh.hidden = true; if (ok) flag('bphotosx.explained', true); res(ok); };
+      $('sheetGo').onclick = () => done(true);
+      $('sheetNo').onclick = () => done(false);
+      sh.onclick = (e) => { if (e.target === sh) done(false); };
+    });
   }
 
   async function connect(quiet) {
     const err = $('connErr');
     err.hidden = true;
+    if (!quiet && !(await explainFirst())) return;
     const modal = quiet ? null : C.pairingModal?.({ title: 'Connect bWalletX' });
     try {
       const r = await C.connectBwalletX({
@@ -264,9 +311,14 @@
       wallet = r.wallet;
       identity = (await wallet.getPublicKey({ identityKey: true })).publicKey;
       remember(true);
+      displayName = '';
       drawNav();
+      lookupName(identity).then((n) => { if (n && identity) { displayName = n; drawNav(); } });
       loadPhotos();
-      if (!quiet) $('library').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!quiet) {
+        scrollTo({ top: 0, behavior: 'smooth' });
+        toast('Signed in with bWalletX. This is your private library.');
+      }
     } catch (e) {
       wallet = identity = null;
       if (!quiet) {
@@ -282,17 +334,21 @@
     try { C.clearPairing?.(); } catch {}
     remember(false);
     wallet = identity = null;
+    displayName = '';
     urls.forEach((u) => URL.revokeObjectURL(u.url));
     urls.clear();
+    shown = [];
     $('grid').innerHTML = '';
     $('jobs').innerHTML = '';
+    closePhoto();
     drawNav();
+    toast('Disconnected. Your photos stay sealed.');
   }
 
   /* ---------- library ---------- */
 
   const urls = new Map(); // photo id -> { url, meta } of the opened photo (memory only, never stored)
-  let loadSeq = 0;
+  let loadSeq = 0, shown = [];
 
   /** The photo id from a sealed body's header (plaintext there, reveals nothing), or null. */
   function sealedId(body) {
@@ -300,10 +356,13 @@
     return new TextDecoder().decode(body.subarray(5, 5 + body[4]));
   }
 
+  const emptyState = () =>
+    `<label class="empty-drop" for="pick">${$('addBtn').querySelector('svg').outerHTML}<b>Upload your first photos</b>` +
+    '<span>Drop them anywhere on this page, or tap here to choose. They’re encrypted with your wallet, and only you can open them.</span></label>';
+
   async function loadPhotos() {
     const seq = ++loadSeq;
     const grid = $('grid'), count = $('count');
-    count.textContent = 'Opening your photos…';
     // Uploaded on this device, plus anything minted (also found when uploaded elsewhere), one entry per photo id.
     const byId = new Map();
     for (const it of await store.mine(identity)) byId.set(it.id, { id: it.id, body: it.sealed, local: it, txid: it.txid || null });
@@ -322,94 +381,137 @@
       // the wallet can refuse a listing; this device's uploads still show
     }
     if (seq !== loadSeq) return;
-    const entries = [...byId.values()].sort((a, b) => String(b.local?.addedAt || '').localeCompare(String(a.local?.addedAt || '')));
-    const minted = entries.filter((e) => e.txid).length;
-    count.textContent = !entries.length ? 'No photos yet.'
-      : `${entries.length === 1 ? '1 photo' : `${entries.length} photos`}, sealed to your keys${minted ? ` · ${minted} minted` : ''}`;
+    shown = [...byId.values()].sort((a, b) => String(b.local?.addedAt || '').localeCompare(String(a.local?.addedAt || '')));
+    const minted = shown.filter((e) => e.txid).length;
+    count.textContent = !shown.length ? 'No photos yet.'
+      : `${shown.length === 1 ? '1 photo' : `${shown.length} photos`} · private${minted ? ` · ${minted} minted` : ' · none minted yet'}`;
     grid.innerHTML = '';
-    if (!entries.length) {
-      grid.innerHTML = '<p class="empty">Upload your first photo. It stays encrypted, and only your wallet can open it.</p>';
-      return;
-    }
-    const tiles = entries.map((e) => {
+    if (!shown.length) { grid.innerHTML = emptyState(); return; }
+    const tiles = shown.map((e, i) => {
       const t = document.createElement('button');
       t.type = 'button';
       t.className = 'tile locked';
-      t.textContent = 'Opening…';
+      t.innerHTML = '<span class="tile-wait">Opening…</span>';
       t.disabled = true;
       grid.appendChild(t);
-      return { e, t };
+      return { e, t, i };
     });
     // Two at a time: every photo is one wallet decrypt, and the phone relay allows about 60 frames a minute.
     let next = 0;
     const work = async () => {
       while (next < tiles.length && seq === loadSeq) {
-        const { e, t } = tiles[next++];
+        const { e, t, i } = tiles[next++];
         try {
-          let open = urls.get(e.id);
-          if (!open) {
-            const r = await unseal(wallet, e.body);
-            if (seq !== loadSeq) return;
-            open = { url: URL.createObjectURL(r.blob), meta: r.meta };
-            urls.set(e.id, open);
-          }
-          const { url, meta } = open;
+          const { url, meta } = await opened(e);
+          if (seq !== loadSeq) return;
           t.className = 'tile';
           t.disabled = false;
-          t.innerHTML = `<img alt=""><span class="badge${e.txid ? ' on' : ''}">${e.txid ? 'Minted' : 'On this device'}</span>`;
-          const img = t.querySelector('img');
-          img.src = url;
-          img.alt = meta.name || 'Photo';
-          t.onclick = () => openPhoto(e, url, meta);
+          t.innerHTML = `<img alt=""><span class="badge${e.txid ? ' on' : ''}">${e.txid ? 'Minted' : 'Private · on this device'}</span><span class="tile-nm"></span>`;
+          t.querySelector('img').src = url;
+          t.querySelector('img').alt = meta.name || 'Photo';
+          t.querySelector('.tile-nm').textContent = meta.name || 'Photo';
+          t.onclick = () => openPhoto(i);
         } catch {
-          t.textContent = 'Can’t open';
+          t.innerHTML = '<span class="tile-wait">Can’t open</span>';
         }
       }
     };
     await Promise.all([work(), work()]);
   }
 
-  let current = null;
-  function openPhoto(e, url, meta) {
-    current = e;
+  async function opened(e) {
+    let o = urls.get(e.id);
+    if (!o) {
+      const r = await unseal(wallet, e.body);
+      o = { url: URL.createObjectURL(r.blob), meta: r.meta, bytes: r.blob.size };
+      urls.set(e.id, o);
+    }
+    return o;
+  }
+
+  /* ---------- the photo page ---------- */
+
+  let current = -1, usdPerBsv = null;
+  fetch('https://api.whatsonchain.com/v1/bsv/main/exchangerate').then((r) => r.json()).then((j) => { if (j && j.rate > 0) usdPerBsv = j.rate; }).catch(() => {});
+  const feeText = (sats) => {
+    const usd = usdPerBsv ? (sats / 1e8) * usdPerBsv : null;
+    return usd != null ? `${usd < 0.01 ? 'under 1 cent' : `about $${usd.toFixed(2)}`}, ${sats.toLocaleString()} sats` : `about ${sats.toLocaleString()} sats`;
+  };
+  const kb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
+
+  async function openPhoto(i) {
+    const e = shown[i];
+    if (!e) return;
+    current = i;
+    const { url, meta, bytes } = await opened(e);
+    if (current !== i) return;
     $('lbImg').src = url;
     $('lbImg').alt = meta.name || 'Photo';
-    const when = meta.addedAt || meta.mintedAt;
-    $('lbMeta').textContent = [meta.name, when && new Date(when).toLocaleDateString()].filter(Boolean).join(' · ');
-    $('lbSave').href = url;
-    $('lbSave').download = `${(meta.name || 'photo').replace(/[^\w .-]/g, '')}.jpg`;
-    $('lbTx').hidden = !e.txid;
-    if (e.txid) $('lbTx').href = `https://whatsonchain.com/tx/${e.txid}`;
+    $('pvName').textContent = meta.name || 'Photo';
+    const chips = e.txid
+      ? ['Private', 'Encrypted with your wallet', 'Minted on chain', 'Preview in Wallet › NFTs']
+      : [e.local ? 'Private' : 'Private', 'Encrypted with your wallet', e.local ? 'On this device only' : 'From your wallet', 'Not on chain', 'Nothing paid'];
+    $('pvStatus').innerHTML = chips.map((c, k) => `<li class="${k < 2 || (e.txid && k === 2) ? 'ok' : ''}">${esc(c)}</li>`).join('');
     const mint = $('lbMint');
     mint.hidden = !!e.txid || !e.local;
     mint.disabled = !canMint;
     mint.textContent = canMint ? 'Mint on chain' : 'Minting opens soon';
-    mint.title = canMint ? '' : 'Minting opens once the bWalletX phone update is out.';
-    $('lbDel').hidden = !e.local || !!e.txid;
-    $('lbDel').textContent = 'Remove';
+    const fee = e.local ? quoteSats(e.local.preview.length + e.local.sealed.length) : 0;
     $('lbNote').textContent = e.txid
-      ? 'Minted: the sealed original is on chain, held by your wallet, with a blurred preview in Wallet › NFTs.'
-      : 'Uploaded: kept encrypted on this device. Mint it to put it on chain, held by your wallet. Your wallet shows the fee first, and minting is permanent.';
+      ? 'Minted. The sealed original is on chain and held by your wallet, with a blurred preview in Wallet › NFTs.'
+      : canMint
+        ? `Minting puts this photo on chain, held by your wallet: the original stays sealed, and a blurred preview shows in Wallet › NFTs. The network fee is ${feeText(fee)}, and your wallet shows it before you approve. Minting is permanent.`
+        : `Minting will put this photo on chain, held by your wallet. The network fee will be ${feeText(fee)}. Minting opens when the bWalletX phone update ships; until then the photo stays private on this device, and nothing is paid.`;
+    $('lbTx').hidden = !e.txid;
+    if (e.txid) $('lbTx').href = `https://whatsonchain.com/tx/${e.txid}`;
+    $('lbSave').href = url;
+    $('lbSave').download = `${(meta.name || 'photo').replace(/[^\w .-]/g, '')}.jpg`;
+    $('lbDel').hidden = !e.local || !!e.txid;
+    $('lbDel').textContent = 'Remove from this device';
+    const when = meta.addedAt || meta.mintedAt;
+    const rows = [
+      ['Added', when ? new Date(when).toLocaleString() : ''],
+      ['Size', meta.w && meta.h ? `${meta.w} × ${meta.h} px · ${kb(bytes)}` : kb(bytes)],
+      ['Location data', 'Removed'],
+      ['Stored', e.txid ? 'On chain, sealed' : 'In this browser, sealed'],
+      ['Photo id', e.id],
+    ].filter((r) => r[1]);
+    $('pvMeta').innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+    $('pvPrev').hidden = $('pvNext').hidden = shown.length < 2;
     $('lb').hidden = false;
+    document.body.classList.add('pv-open');
     $('lbX').focus();
   }
-  const closePhoto = () => { $('lb').hidden = true; $('lbImg').removeAttribute('src'); current = null; };
+  function closePhoto() {
+    $('lb').hidden = true;
+    $('lbImg').removeAttribute('src');
+    document.body.classList.remove('pv-open');
+    current = -1;
+  }
+  const step = (d) => { if (shown.length > 1 && current >= 0) openPhoto((current + d + shown.length) % shown.length); };
   $('lbX').onclick = closePhoto;
-  $('lb').onclick = (e) => { if (e.target.closest('.lb-img') && e.target.tagName !== 'IMG') closePhoto(); };
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('lb').hidden) closePhoto(); });
+  $('pvPrev').onclick = () => step(-1);
+  $('pvNext').onclick = () => step(1);
+  document.addEventListener('keydown', (e) => {
+    if (!$('connectSheet').hidden && e.key === 'Escape') { $('sheetNo').click(); return; }
+    if ($('lb').hidden) return;
+    if (e.key === 'Escape') closePhoto();
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  });
 
   let minting = false;
   $('lbMint').onclick = async () => {
-    const e = current;
+    const e = shown[current];
     if (!e || !e.local || !canMint || minting) return;
     minting = true;
     const btn = $('lbMint');
     btn.disabled = true;
     try {
       const txid = await mintPhoto(wallet, e.local, (s) => { btn.textContent = s; });
-      e.txid = txid;
       e.local = { ...e.local, txid };
       closePhoto();
+      toast('Minted. It’s on chain, held by your wallet.');
       loadPhotos();
     } catch (err) {
       btn.textContent = 'Mint on chain';
@@ -421,7 +523,7 @@
   };
   // Removing an upload that isn't minted: a second tap confirms (no browser dialogs).
   $('lbDel').onclick = async () => {
-    const e = current, btn = $('lbDel');
+    const e = shown[current], btn = $('lbDel');
     if (!e || !e.local || e.txid) return;
     if (btn.textContent !== 'Tap again to remove') { btn.textContent = 'Tap again to remove'; return; }
     await store.del(e.local.key);
@@ -429,6 +531,7 @@
     if (u) URL.revokeObjectURL(u.url);
     urls.delete(e.id);
     closePhoto();
+    toast('Removed from this device.');
     loadPhotos();
   };
 
@@ -437,8 +540,9 @@
   let queue = Promise.resolve();
   function addFiles(files) {
     if (!wallet) return;
-    for (const file of files) {
-      if (!/^image\//.test(file.type) && !/\.(heic|heif)$/i.test(file.name)) continue;
+    const imgs = files.filter((f) => /^image\//.test(f.type) || /\.(heic|heif)$/i.test(f.name));
+    if (!imgs.length) { toast('Those aren’t photos. Try a JPEG, PNG or HEIC.'); return; }
+    for (const file of imgs) {
       const li = document.createElement('li');
       li.className = 'job';
       const thumb = URL.createObjectURL(file);
@@ -450,10 +554,15 @@
       // One at a time: each photo is one wallet call to seal its key.
       queue = queue.then(async () => {
         try {
-          await upload(wallet, file, (s) => { st.textContent = s; });
+          await upload(wallet, file, (s) => {
+            st.textContent = s === 'Sealing with your wallet' && !flag('bphotosx.sealed')
+              ? 'Approve in bWalletX: let bPhotosX seal your photos'
+              : s;
+          });
+          flag('bphotosx.sealed', true);
           li.classList.add('ok');
-          st.textContent = 'Uploaded · on this device';
-          setTimeout(() => { li.remove(); URL.revokeObjectURL(thumb); }, 6000);
+          st.textContent = 'Uploaded · private · on this device';
+          setTimeout(() => { li.remove(); URL.revokeObjectURL(thumb); }, 5000);
           loadPhotos();
         } catch (e) {
           li.classList.add('bad');
@@ -463,10 +572,20 @@
     }
   }
   $('pick').onchange = (e) => { addFiles([...e.target.files]); e.target.value = ''; };
-  const drop = $('drop');
-  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-  drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); addFiles([...e.dataTransfer.files]); });
+  // Drop anywhere on the page while signed in.
+  let dragDepth = 0;
+  const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+  document.addEventListener('dragenter', (e) => { if (!identity || !hasFiles(e)) return; e.preventDefault(); dragDepth++; $('dropzone').hidden = false; });
+  document.addEventListener('dragover', (e) => { if (identity && hasFiles(e)) e.preventDefault(); });
+  document.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('dropzone').hidden = true; } });
+  document.addEventListener('drop', (e) => {
+    if (!identity || !hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    $('dropzone').hidden = true;
+    $('library').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    addFiles([...e.dataTransfer.files]);
+  });
 
   /* ---------- start ---------- */
 
@@ -475,12 +594,8 @@
     $('connErr').hidden = false;
     return;
   }
-  buttons().forEach((b) => {
-    b.onclick = () => {
-      if (!identity) return connect(false);
-      if (b.id === 'navBtn') return disconnect();
-      $('library').scrollIntoView({ behavior: 'smooth', block: 'start' }); // already connected: go to the library
-    };
+  connectButtons().forEach((b) => {
+    b.onclick = () => (identity ? $('library').scrollIntoView({ behavior: 'smooth', block: 'start' }) : connect(false));
     C.bindPrewarm?.(b); // wakes the wallet on hover, focus or touch, before the click
   });
   try { C.prewarmBwalletX?.(); } catch {}
