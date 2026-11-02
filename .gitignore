@@ -1,0 +1,5 @@
+.env*
+!.env.example
+.vercel
+.DS_Store
+Screenshot*.png

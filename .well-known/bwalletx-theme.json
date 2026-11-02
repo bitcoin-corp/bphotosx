@@ -1,0 +1,24 @@
+{
+  "v": 1,
+  "id": "bphotosx",
+  "label": "bPhotosX",
+  "blurb": "bWalletX gold on black",
+  "scheme": "dark",
+  "accent": "#F5B800",
+  "hi": "#FFD24D",
+  "lo": "#C98F00",
+  "on": "#000000",
+  "bg": "#000000",
+  "surface": "#0D0E11",
+  "surface2": "#15171C",
+  "nav": "#000000",
+  "text": "#F4F1E8",
+  "muted": "#A9A69C",
+  "line": "#1F2127",
+  "success": "#9FD67A",
+  "danger": "#FF8A7A",
+  "livery": {
+    "display": "Space Grotesk",
+    "label": "IBM Plex Sans"
+  }
+}

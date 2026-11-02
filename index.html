@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bPhotosX · Your photos, minted privately</title>
+<meta name="description" content="bPhotosX: The photos you take, minted to your keys. Private by default. Part of bWalletX.">
+<link rel="canonical" href="https://bphotosx.com/">
+<meta property="og:type" content="website"><meta property="og:url" content="https://bphotosx.com/">
+<meta property="og:site_name" content="bPhotosX"><meta property="og:title" content="bPhotosX · Your photos, minted privately"><meta property="og:description" content="bPhotosX: The photos you take, minted to your keys. Private by default. Part of bWalletX.">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--ink:#f4f1e8;--muted:#a9a69c;--dim:#7c7a73;--gold:#f5b800;--gold-hi:#ffd24d;--card:#0d0e11;--edge:#1f2127;--bad:#ff8a7a;--ok:#9fd67a;--grad:linear-gradient(180deg,#ffe58a,#ffd24d 55%,#c98f00);--hf:'Space Grotesk',system-ui,sans-serif;--bf:'IBM Plex Sans',system-ui,sans-serif;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--bf);min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--gold-hi);text-underline-offset:3px}a:focus-visible,button:focus-visible,label:focus-within{outline:2px solid var(--gold-hi);outline-offset:3px;border-radius:8px}
+[hidden]{display:none!important}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px;width:100%}h1,h2,h3{font-family:var(--hf);letter-spacing:-.03em;margin:0}
+.gx{color:var(--gold-hi)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:12px;height:68px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font:700 21px/1 var(--hf);letter-spacing:-.02em}.brand img{display:block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 22px;border-radius:999px;border:0;cursor:pointer;font:600 16px/1 var(--hf);text-decoration:none;transition:transform .16s var(--ease),border-color .16s}
+.btn-gold{background:var(--grad);color:#000;box-shadow:0 0 0 1px rgba(255,210,77,.35),0 10px 30px -10px rgba(245,184,0,.6),inset 0 1px 0 rgba(255,255,255,.5)}.btn-gold:hover{transform:translateY(-1px)}
+.btn-ghost{background:none;color:var(--ink);border:1px solid var(--edge)}.btn-ghost:hover{border-color:rgba(255,210,77,.35)}
+.btn:disabled{opacity:.55;cursor:default;transform:none}
+.btn-sm{height:40px;padding:0 16px;font-size:15px}
+main{flex:1}
+.hero{padding:72px 16px 64px;position:relative}
+.hero::before{content:"";position:absolute;inset:0 30% 20% -10%;z-index:-1;background:radial-gradient(closest-side,rgba(245,184,0,.12),transparent 70%)}
+.eyebrow{font:500 13px/1 var(--hf);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 20px}
+.hero h1{font-size:clamp(52px,10vw,112px);line-height:.95;letter-spacing:-.045em}
+.lede{font-size:20px;color:var(--muted);max-width:560px;margin:24px 0 32px}
+.ctas{display:flex;flex-wrap:wrap;gap:12px}
+.err{color:var(--bad);margin:16px 0 0;font-size:15px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;padding-bottom:96px}
+.step{background:var(--card);border:1px solid var(--edge);border-radius:20px;padding:24px}
+.step b{display:block;font:600 13px/1 var(--hf);letter-spacing:.14em;color:var(--gold-hi);margin-bottom:14px}
+.step h3{font-size:20px;margin-bottom:8px}.step p{margin:0;color:var(--muted);font-size:15px}
+/* vault */
+.vault{padding:40px 16px 96px}
+.vhead{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:16px;margin-bottom:24px}
+.vhead h2{font-size:clamp(32px,5vw,48px)}.vhead p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.drop{display:block;border:1.5px dashed #3a3830;border-radius:20px;padding:32px 20px;text-align:center;color:var(--muted);cursor:pointer;transition:border-color .16s,background .16s;margin-bottom:24px}
+.drop:hover,.drop.over{border-color:var(--gold-hi);background:rgba(255,210,77,.04)}
+.drop strong{display:block;color:var(--ink);font:600 18px/1.3 var(--hf);margin-bottom:4px}
+.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.jobs{list-style:none;margin:0 0 24px;padding:0;display:grid;gap:8px}
+.job{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:10px 14px;font-size:14px}
+.job img{width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none}
+.job .jn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job .js{color:var(--muted);white-space:nowrap}.job.ok .js{color:var(--ok)}.job.bad .js{color:var(--bad);white-space:normal}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.tile{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--card);border:1px solid var(--edge);padding:0;cursor:pointer}
+.tile img{width:100%;height:100%;object-fit:cover;display:block}
+.tile.locked{display:grid;place-items:center;color:var(--dim);font-size:13px;cursor:default}
+.empty{color:var(--muted);text-align:center;padding:48px 16px;border:1px solid var(--edge);border-radius:20px}
+.note{margin-top:32px;color:var(--dim);font-size:14px;max-width:720px}
+/* lightbox */
+.lb{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;flex-direction:column}
+.lb-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;color:var(--muted);font-size:14px}
+.lb-top .lb-meta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-acts{display:flex;gap:8px;flex:none}
+.lb-img{flex:1;min-height:0;display:grid;place-items:center;padding:0 16px 16px}
+.lb-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+footer{border-top:1px solid #121317;padding:40px 0 56px;color:var(--dim);font-size:14px}
+.foot{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between;align-items:center}
+.foot nav{display:flex;flex-wrap:wrap;gap:18px}.foot nav a{color:var(--muted);text-decoration:none}.foot nav a:hover{color:var(--ink)}
+.bwx-strip{background:#0a0a0b;border-bottom:1px solid rgba(255,210,77,.16);font:500 13px/1 'IBM Plex Sans',system-ui,-apple-system,sans-serif}
+.bwx-strip a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 16px;color:#cfcabd;text-decoration:none;letter-spacing:.01em}
+.bwx-strip svg{width:12px;height:16px;flex:none;display:block}.bwx-strip b{color:#ffd24d;font-weight:600}
+.bwx-strip .bwx-go{color:#7c7a73;transition:transform .16s cubic-bezier(.2,.8,.2,1),color .16s}
+.bwx-strip a:hover{color:#f4f1e8}.bwx-strip a:hover .bwx-go{color:#ffd24d;transform:translateX(2px)}
+.bwx-strip a:focus-visible{outline:2px solid #ffd24d;outline-offset:-4px;border-radius:8px}
+.who{display:inline-flex;align-items:center;gap:8px}
+.who .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+@media (max-width:520px){.nav .who-key{display:none}.grid{grid-template-columns:repeat(3,1fr);gap:4px}.tile{border-radius:6px}}
+@media (prefers-reduced-motion:reduce){.btn,.bwx-strip .bwx-go,.drop{transition:none}}
+</style>
+</head>
+<body>
+<aside class="bwx-strip" aria-label="bWalletX"><a href="https://bwalletx.com"><svg viewBox="23 8 74 100" aria-hidden="true" focusable="false"><defs><linearGradient id="bwx-g" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="105"><stop offset="0" stop-color="#FFE58A"/><stop offset=".55" stop-color="#FFD24D"/><stop offset="1" stop-color="#C98F00"/></linearGradient><mask id="bwx-m"><rect width="140" height="140" fill="#fff"/><circle cx="60" cy="72" r="15" fill="#000"/></mask></defs><g fill="url(#bwx-g)" mask="url(#bwx-m)"><polygon points="45,12 45,76 27,76 27,30"/><circle cx="60" cy="72" r="33"/></g></svg><span>Part of <b>bWalletX</b></span><span class="bwx-go" aria-hidden="true">&rarr;</span></a></aside>
+<header class="wrap nav">
+  <a class="brand" href="/" aria-label="bPhotosX home"><img src="/logo.svg" alt="" width="22" height="30"><span>bPhotos<span class="gx">X</span></span></a>
+  <button class="btn btn-gold btn-sm" id="navBtn" type="button">Connect bWalletX</button>
+</header>
+<main>
+<div id="out">
+  <section class="wrap hero">
+    <p class="eyebrow">bphotosx.com</p>
+    <h1>bPhotos<span class="gx">X</span></h1>
+    <p class="lede">The photos you take, minted to your keys. Private by default.</p>
+    <div class="ctas">
+      <button class="btn btn-gold" id="heroBtn" type="button">Connect bWalletX</button>
+      <a class="btn btn-ghost" href="https://bwalletx.com/get">Get bWalletX</a>
+    </div>
+    <p class="err" id="connErr" hidden></p>
+  </section>
+  <section class="wrap steps" aria-label="How it works">
+    <div class="step"><b>01</b><h3>Pick a photo</h3><p>From your camera roll or your camera. Location data is taken out before anything else happens.</p></div>
+    <div class="step"><b>02</b><h3>Sealed on your device</h3><p>The photo is encrypted in your browser. Only your bWalletX keys can open it again.</p></div>
+    <div class="step"><b>03</b><h3>Minted to your keys</h3><p>The sealed photo is written to Bitcoin and held in your own wallet, with a blurred preview in Wallet › NFTs. Your wallet shows the fee and asks you first.</p></div>
+  </section>
+</div>
+<section class="wrap vault" id="in" hidden>
+  <div class="vhead">
+    <div><h2>Your photos</h2><p id="count">Opening your wallet…</p></div>
+    <label class="btn btn-gold" for="pick">Add photos</label>
+  </div>
+  <label class="drop" id="drop" for="pick">
+    <input type="file" id="pick" accept="image/*" multiple>
+    <strong>Drop photos here, or tap to choose</strong>
+    Each photo is resized to 1600 px, stripped of location data, encrypted on this device, then minted to your keys. A blurred preview goes into Wallet › NFTs.
+  </label>
+  <ul class="jobs" id="jobs"></ul>
+  <div class="grid" id="grid"></div>
+  <p class="note">What goes on chain is ciphertext plus a blurred preview: anyone can see that a photo exists, its size and the blur, nobody can see the photo. Each photo has its own key, derived from your wallet. Keep your bWalletX backup safe, because without it these photos can't be opened.</p>
+</section>
+</main>
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="lb-top"><span class="lb-meta" id="lbMeta"></span><span class="lb-acts"><a class="btn btn-ghost btn-sm" id="lbSave" download>Save</a><a class="btn btn-ghost btn-sm" id="lbTx" target="_blank" rel="noopener">On chain</a><button class="btn btn-ghost btn-sm" id="lbX" type="button" aria-label="Close">Close</button></span></div>
+  <div class="lb-img"><img id="lbImg" alt=""></div>
+</div>
+<footer class="wrap foot">
+  <a class="brand" href="/"><img src="/logo.svg" alt="" width="18" height="24"><span>bPhotos<span class="gx">X</span></span></a>
+  <nav><a href="https://bwalletx.com">bWalletX</a><a href="https://bwalletx.com/family">The family</a><a href="https://bchatx.com">bChatX</a><a href="https://bmarketx.com">bMarketX</a></nav>
+</footer>
+<script src="https://unpkg.com/@bwalletx/connect@0.5.4/dist/bwalletx-connect.global.js"></script>
+<script src="https://unpkg.com/@bsv/sdk@2.8.10/dist/umd/bundle.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
