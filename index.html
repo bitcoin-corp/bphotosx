@@ -23,7 +23,7 @@
 <main>
 <section class="xs-top" id="top" aria-labelledby="xs-h1">
   <img class="xs-bg" src="/media/stock/hero.jpg" alt="" aria-hidden="true">
-  <header class="xs-wrap xs-nav"><a class="xs-brand" href="/" aria-label="bPhotosX home"><svg viewBox="23 8 74 100" aria-hidden="true" focusable="false"><path fill="currentColor" d="M45 12V72H27V30Z M27 72a33 33 0 1 1 66 0a33 33 0 1 1-66 0Z M45 72a15 15 0 1 0 30 0a15 15 0 1 0-30 0Z"/></svg><span><span class="xs-sr">b</span><span class="xs-nm">Photos</span><i>X</i></span></a><nav class="xs-links" aria-label="Main"><a href="#photos">Browse</a><a class="xs-hs" href="#library">Your library</a><a class="xs-hs" href="#how">For photographers</a><button class="xs-btn xs-gold" id="navBtn" type="button">Connect bWalletX</button><div class="acct" id="acct" hidden><button class="acct-chip" id="acctBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="acctMenu"><span class="av" id="acctAv" aria-hidden="true">b</span><span class="acct-nm" id="acctName"></span><span class="acct-car" aria-hidden="true">&#9662;</span></button><div class="acct-menu" id="acctMenu" role="menu" hidden><p class="acct-sub">Signed in with bWalletX</p><p class="acct-key" id="acctKey"></p><a role="menuitem" href="#library" id="menuLib">Your library</a><button role="menuitem" type="button" id="disconnectBtn">Disconnect</button></div></div></nav></header>
+  <header class="xs-wrap xs-nav"><a class="xs-brand" href="/" aria-label="bPhotosX home"><svg viewBox="23 8 74 100" aria-hidden="true" focusable="false"><path fill="currentColor" d="M45 12V72H27V30Z M27 72a33 33 0 1 1 66 0a33 33 0 1 1-66 0Z M45 72a15 15 0 1 0 30 0a15 15 0 1 0-30 0Z"/></svg><span><span class="xs-sr">b</span><span class="xs-nm">Photos</span><i>X</i></span></a><nav class="xs-links" aria-label="Main"><a href="#photos">Browse</a><a class="xs-hs" href="#library">Your library</a><a class="xs-hs" href="#how">For photographers</a><a href="#exchange">Exchange</a><button class="xs-btn xs-gold" id="navBtn" type="button">Connect bWalletX</button><div class="acct" id="acct" hidden><button class="acct-chip" id="acctBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="acctMenu"><span class="av" id="acctAv" aria-hidden="true">b</span><span class="acct-nm" id="acctName"></span><span class="acct-car" aria-hidden="true">&#9662;</span></button><div class="acct-menu" id="acctMenu" role="menu" hidden><p class="acct-sub">Signed in with bWalletX</p><p class="acct-key" id="acctKey"></p><a role="menuitem" href="#library" id="menuLib">Your library</a><button role="menuitem" type="button" id="disconnectBtn">Disconnect</button></div></div></nav></header>
   <div class="xs-wrap xs-in"><h1 class="xs-h1" id="xs-h1"><svg class="xs-hb" viewBox="23 8 74 100" aria-hidden="true" focusable="false"><path fill="currentColor" d="M45 12V72H27V30Z M27 72a33 33 0 1 1 66 0a33 33 0 1 1-66 0Z M45 72a15 15 0 1 0 30 0a15 15 0 1 0-30 0Z"/></svg><span class="xs-sr">b</span><span class="xs-nm rx-g">PhotosX</span></h1><p class="xs-lede">Your photographs, private to your wallet. Keep the family albums, and sell or license the shots you choose.</p><div class="xs-ctas"><a class="xs-btn xs-ghost" href="#photos">Browse</a><button class="xs-btn xs-gold" id="heroBtn" type="button">Open your library</button></div><p class="err" id="connErr" hidden></p></div>
   <div class="rx-ghost" aria-hidden="true">PHOTOSX</div><div class="rx-lb" aria-hidden="true"></div>
   <a class="xs-credit" href="https://unsplash.com/photos/baRYCsjO6z4" target="_blank" rel="noopener">Photo: Jennifer Trovato / Unsplash</a>
@@ -46,10 +46,15 @@
   <div class="lib-out" id="out"><p><b>Connect bWalletX to open your library.</b> Nothing about your photos is visible to us, or to anyone else, without your wallet.</p><button class="xs-btn xs-gold" id="libBtn" type="button">Connect bWalletX</button></div>
   <div class="lib-in" id="in" hidden>
     <div class="lib-top">
-      <div><p class="xs-eye">Your library</p><h2 class="lib-h">Signed in as <span id="libName"></span></h2><p class="lib-count" id="count">Opening your photos…</p></div>
+      <div class="acct-card"><span class="acct-big" id="libAv" aria-hidden="true">b</span><div><p class="xs-eye">Your account</p><h2 class="lib-h">Signed in as <span id="libName"></span></h2><p class="lib-count" id="count">Opening your photos…</p><p class="lib-store" id="libStore" hidden></p></div></div>
+      <div class="lib-acts">
+      <button class="xs-btn xs-ghost imp-btn" type="button" id="importBtn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Import from…</button>
       <label class="xs-btn xs-gold up-btn" for="pick" id="addBtn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Upload photos</label>
+      </div>
     </div>
     <input class="sr" type="file" id="pick" accept="image/*" multiple>
+    <input class="sr" type="file" id="pickDir" webkitdirectory multiple>
+    <input class="sr" type="file" id="pickZip" accept=".zip,application/zip" multiple>
     <ul class="jobs" id="jobs"></ul>
     <div class="grid" id="grid"></div>
     <p class="note"><span><b>We never see your photos.</b> Each one is encrypted on your device with its own key, and your wallet holds that key. Sealed like that, your photos are kept in bDriveX, so they follow you to every device where you use your wallet; bDriveX holds only the sealed copies. If bDriveX can’t take them for a moment, they wait in this browser and move in on your next visit. Keep your bWalletX backup safe: without it these photos can’t be opened.</span></p>
@@ -91,9 +96,19 @@
     <li class="rv st-i"><span class="n" aria-hidden="true">1</span><h3>Upload your photos</h3><p>From your camera roll or your camera. Location data comes out before anything else happens.</p><span class="s">Live</span></li>
     <li class="rv st-i"><span class="n" aria-hidden="true">2</span><h3>Sealed on your device</h3><p>Each photo is encrypted in your browser with its own key, and your bWalletX holds that key.</p><span class="s">Live</span></li>
     <li class="rv st-i"><span class="n" aria-hidden="true">3</span><h3>Mint the ones you keep</h3><p>Open a photo and mint it: it goes on chain, held by your wallet. Your wallet shows the fee first.</p><span class="s">Opens soon</span></li>
-    <li class="rv st-i"><span class="n" aria-hidden="true">4</span><h3>Sell or license</h3><p>Set a price for personal or commercial use. The buyer’s wallet gets the key, and you’re paid directly.</p><span class="s">Next</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">4</span><h3>Sell or license</h3><p>Choose personal or commercial use. The buyer’s wallet gets the key to the original.</p><span class="s">Next</span></li>
   </ol>
-  <p class="note"><span><b>Nothing goes public unless you choose.</b> Your library stays encrypted. A photo you list for sale is checked before it appears, so the market stays safe.</span></p>
+  <p class="note"><span><b>Nothing goes public unless you choose.</b> Your library stays encrypted. Only a photo you choose to mint is shown anywhere, and then only as a heavily blurred preview.</span></p>
+</section>
+
+<section class="sec how exch" id="exchange" aria-labelledby="ex-h">
+  <div class="head"><div><span class="kick mono rv">Exchange · Beta</span><h2 id="ex-h" class="rv">Buy and sell photos <span>on bMarketX.</span></h2><p class="sub rv">bMarketX is the bWalletX family’s market for things people have minted. bPhotosX keeps your library; bMarketX is where a minted photo can be listed.</p></div></div>
+  <ol class="steps">
+    <li class="rv st-i"><span class="n" aria-hidden="true">1</span><h3>Mint a photo</h3><p>From your library. The original goes on chain sealed; all anyone else can see is a heavily blurred preview.</p><span class="s">Opens soon</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">2</span><h3>List it on bMarketX</h3><p>bMarketX lists things minted with bWalletX. Nothing is listed unless you list it.</p><span class="s">bMarketX is live</span></li>
+    <li class="rv st-i"><span class="n" aria-hidden="true">3</span><h3>Buy with your wallet</h3><p>Browse bMarketX and buy with bWalletX. What you buy is held by your wallet.</p><span class="s">bMarketX is live</span></li>
+  </ol>
+  <div class="ex-go rv"><a class="btn btn-gold" href="https://bmarketx.com" rel="noopener">Go to bMarketX</a><p>You can list photos there once minting opens in bPhotosX. bPhotosX shows no listings itself.</p></div>
 </section>
 
 <section class="status" id="status" aria-labelledby="st-h">
@@ -102,7 +117,7 @@
     <div><h3 class="mono"><i></i>Live today</h3>
       <ul><li><b>bWalletX</b>, your own wallet, on web, iPhone, Android, desktop and Chrome.</li><li><b>Upload to your private library</b>, encrypted, and kept in bDriveX so it follows you to every device. bDriveX is opening in stages; until it opens to your wallet, your library stays on this device.</li><li><b>Encryption on your device</b>, with keys held by your wallet.</li></ul></div>
     <div class="nx"><h3 class="mono"><i></i>Next</h3>
-      <ul><li><b>Minting your photos</b>, once the bWalletX phone update is out.</li><li><b>Sell and license your photos</b>, paid straight to you.</li><li><b>Edit with b</b>, our wallet agent, in the bPhotosX Studio.</li></ul></div>
+      <ul><li><b>Minting your photos</b>, once the bWalletX phone update is out.</li><li><b>Sell and license your photos</b> on bMarketX, with the buyer’s wallet holding the key.</li><li><b>Edit with b</b>, our wallet agent, in the bPhotosX Studio.</li></ul></div>
   </div>
 </section>
 
@@ -141,6 +156,20 @@
     <dl class="pv-meta" id="pvMeta"></dl>
   </aside>
 </div>
+
+<div class="sheet" id="importSheet" hidden role="dialog" aria-modal="true" aria-labelledby="impH"><div class="sheet-card imp-card">
+  <h3 id="impH">Import your photos</h3>
+  <p>Bring in photos from your phone, your computer or another service. Each one is sealed on this device before it goes anywhere, and location data comes out.</p>
+  <ul class="imp-list">
+    <li><div><b>iPhone or iPad</b><span>Open bphotosx.com on your iPhone, in Safari or the bWalletX app, and pick straight from your Photos library.</span></div><button class="xs-btn xs-ghost" type="button" data-imp="photos">Choose photos</button></li>
+    <li><div><b>Photos on a Mac</b><span>Select photos in the Photos app and drag them onto this page. Or use File › Export, then choose that folder.</span></div><button class="xs-btn xs-ghost" type="button" data-imp="folder">Choose a folder</button></li>
+    <li><div><b>iCloud Photos</b><span>At <a href="https://www.icloud.com/photos" target="_blank" rel="noopener">icloud.com/photos</a>, select photos and download them (Most Compatible gives JPEGs), then choose the download.</span></div><button class="xs-btn xs-ghost" type="button" data-imp="zip">Choose a .zip</button></li>
+    <li><div><b>Google Photos</b><span>At <a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a>, export Google Photos as .zip files, then choose them here.</span></div><button class="xs-btn xs-ghost" type="button" data-imp="zip">Choose .zip files</button></li>
+    <li><div><b>Photobox, Pinterest and others</b><span>Download your photos, or your data, from the service. Choose the .zip or the folder here: we bring in the photos and skip everything else.</span></div><button class="xs-btn xs-ghost" type="button" data-imp="zip">Choose a .zip</button></li>
+  </ul>
+  <p class="imp-note">iCloud and Photobox don’t let other sites connect to your photos, so a download is the way in. Photos you’ve already imported are skipped.</p>
+  <div class="sheet-row"><button class="xs-btn xs-gold" id="impDone" type="button">Done</button></div>
+</div></div>
 
 <div class="sheet" id="connectSheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetH"><div class="sheet-card">
   <h3 id="sheetH">Connect bWalletX</h3>

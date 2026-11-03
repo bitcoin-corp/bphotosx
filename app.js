@@ -170,16 +170,18 @@
 
   const quoteSats = (bytes) => Math.ceil((bytes + 600) * FEE_SAT_PER_BYTE + 2);
 
-  async function upload(wallet, file, onStep) {
+  async function upload(wallet, file, onStep, src) {
     onStep('Preparing');
+    // src: sha256 of the original file, so importing the same photo again is skipped. Sealed in meta, and on this device.
+    src = src || await sha256(await file.arrayBuffer());
     const { photo, preview, w, h } = await prepare(file);
     const id = toHex(crypto.getRandomValues(new Uint8Array(8)));
     const name = (file.name || 'Photo').replace(/\.[^.]+$/, '').slice(0, 100) || 'Photo';
     const addedAt = new Date().toISOString();
     onStep('Sealing with your wallet');
-    const sealed = await seal(wallet, id, { v: 1, name, type: 'image/jpeg', w, h, addedAt }, photo);
+    const sealed = await seal(wallet, id, { v: 1, name, type: 'image/jpeg', w, h, addedAt, src }, photo);
     if (sealed.length > MAX_SEALED_BYTES) throw new Error('That photo is too big.');
-    const item = { key: `${identity}:${id}`, identity, id, name, addedAt, sealed, preview };
+    const item = { key: `${identity}:${id}`, identity, id, name, addedAt, sealed, preview, src };
     await store.put(item);
     if (syncing) await syncing; // signing in to bDriveX right now: wait for its answer
     if (drive.state === 'on') {
@@ -327,6 +329,7 @@
     }));
     item.drive = hash;
     await store.put(item);
+    if (drive.usage) drive.usage.bytes = (drive.usage.bytes || 0) + item.sealed.length;
   }
 
   /* ---------- wallet and account ---------- */
@@ -370,7 +373,7 @@
       const name = displayName || short(identity);
       $('acctName').textContent = name;
       $('libName').textContent = name;
-      $('acctAv').textContent = (displayName ? displayName[0] : 'b').toUpperCase();
+      $('acctAv').textContent = $('libAv').textContent = (displayName ? displayName[0] : 'b').toUpperCase();
       $('acctKey').textContent = short(identity);
       $('acctKey').title = identity;
     }
@@ -438,6 +441,8 @@
       drawNav();
       lookupName(identity).then((n) => { if (n && identity) { displayName = n; drawNav(); } });
       loadPhotos().then(() => syncDrive());
+      // Coming back signed in: open on your account, not the front page (the logo still goes there).
+      if (quiet && !location.hash) { history.replaceState(null, '', '#library'); route(); }
       if (!quiet) {
         goLibrary();
         toast('Signed in with bWalletX. This is your private library.');
@@ -567,6 +572,9 @@
       html += retry;
     }
     count.innerHTML = html;
+    const u = drive.state === 'on' && drive.usage;
+    $('libStore').hidden = !u;
+    if (u) $('libStore').textContent = `bDriveX storage: ${size(u.bytes || 0)} of ${size(u.quota || 0)} used`;
     const b = $('driveRetry');
     if (b) b.onclick = () => syncDrive(true);
   }
@@ -616,6 +624,7 @@
           const e = shown.find((x) => x.id === it.id);
           if (e) { e.drive = it.drive; drawCount(); }
         }
+        drive.usage = (await authed(() => driveCall('/v1/me')).catch(() => null))?.usage || null;
       } catch (e) {
         if (who !== identity) return;
         drive.state = e instanceof DriveError ? (e.status === 403 ? 'invite' : 'down') : 'declined';
@@ -633,6 +642,8 @@
       const r = await unseal(wallet, e.body);
       o = { url: URL.createObjectURL(r.blob), meta: r.meta, bytes: r.blob.size };
       urls.set(e.id, o);
+      // Fetched from bDriveX: its fingerprint was sealed inside. Keep it on this device so imports skip it.
+      if (e.local && !e.local.src && r.meta.src) { e.local.src = r.meta.src; store.put(e.local).catch(() => {}); }
     }
     return o;
   }
@@ -646,6 +657,7 @@
     return usd != null ? `${usd < 0.01 ? 'under 1 cent' : `about $${usd.toFixed(2)}`}, ${sats.toLocaleString()} sats` : `about ${sats.toLocaleString()} sats`;
   };
   const kb = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
+  const size = (n) => { const g = n / 1024 ** 3; return g >= 1 ? `${+g.toFixed(g >= 10 ? 0 : 1)} GB` : n ? kb(n) : '0 KB'; };
 
   async function openPhoto(i) {
     const e = shown[i];
@@ -702,6 +714,7 @@
   $('pvNext').onclick = () => step(1);
   document.addEventListener('keydown', (e) => {
     if (!$('connectSheet').hidden && e.key === 'Escape') { $('sheetNo').click(); return; }
+    if (!$('importSheet').hidden && e.key === 'Escape') { $('impDone').click(); return; }
     if ($('lb').hidden) return;
     if (e.key === 'Escape') closePhoto();
     if (e.key === 'ArrowLeft') step(-1);
@@ -754,13 +767,124 @@
     loadPhotos();
   };
 
+  /* ---------- import: phones, folders and downloads (.zip) from other services ---------- */
+  // iCloud, Photobox and the rest don't let other sites read your photos, so their downloads are the way in. A zip is
+  // read from its central directory and inflated one entry at a time from slices of the file, so a multi-GB Google
+  // Takeout never has to fit in memory. Stored and deflated entries, ZIP64 for big exports; encrypted zips are skipped.
+
+  const PHOTO_FILE = /\.(jpe?g|png|heic|heif|webp|gif|tiff?|bmp|avif)$/i;
+  const PHOTO_TYPE = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', heic: 'image/heic', heif: 'image/heif', webp: 'image/webp', gif: 'image/gif', tif: 'image/tiff', tiff: 'image/tiff', bmp: 'image/bmp', avif: 'image/avif' };
+  const isPhoto = (f) => /^image\//.test(f.type) || PHOTO_FILE.test(f.name);
+  const isZip = (f) => /\.zip$/i.test(f.name) || f.type === 'application/zip';
+
+  async function zipPhotos(file) {
+    const tailStart = Math.max(0, file.size - 65_557);
+    const tail = new DataView(await file.slice(tailStart).arrayBuffer());
+    let e = -1;
+    for (let i = tail.byteLength - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { e = i; break; }
+    if (e < 0) throw new Error(`${file.name} isn’t a zip file bPhotosX can read.`);
+    let count = tail.getUint16(e + 10, true), cdSize = tail.getUint32(e + 12, true), cdOff = tail.getUint32(e + 16, true);
+    if ((cdOff === 0xffffffff || count === 0xffff) && e >= 20 && tail.getUint32(e - 20, true) === 0x07064b50) {
+      const at = Number(tail.getBigUint64(e - 12, true));
+      const z = new DataView(await file.slice(at, at + 56).arrayBuffer());
+      count = Number(z.getBigUint64(32, true)); cdSize = Number(z.getBigUint64(40, true)); cdOff = Number(z.getBigUint64(48, true));
+    }
+    const cd = new DataView(await file.slice(cdOff, cdOff + cdSize).arrayBuffer());
+    const out = [];
+    for (let n = 0, p = 0; n < count && p + 46 <= cd.byteLength && cd.getUint32(p, true) === 0x02014b50; n++) {
+      const flags = cd.getUint16(p + 8, true), method = cd.getUint16(p + 10, true);
+      let csize = cd.getUint32(p + 20, true), usize = cd.getUint32(p + 24, true), off = cd.getUint32(p + 42, true);
+      const nameLen = cd.getUint16(p + 28, true), extraLen = cd.getUint16(p + 30, true), commentLen = cd.getUint16(p + 32, true);
+      const path = new TextDecoder().decode(new Uint8Array(cd.buffer, p + 46, nameLen));
+      for (let x = p + 46 + nameLen, end = x + extraLen; x + 4 <= end; x += 4 + cd.getUint16(x + 2, true)) {
+        if (cd.getUint16(x, true) !== 1) continue; // ZIP64 sizes and offset, in this order, only where the 32-bit field is full
+        let q = x + 4;
+        if (usize === 0xffffffff) { usize = Number(cd.getBigUint64(q, true)); q += 8; }
+        if (csize === 0xffffffff) { csize = Number(cd.getBigUint64(q, true)); q += 8; }
+        if (off === 0xffffffff) off = Number(cd.getBigUint64(q, true));
+      }
+      p += 46 + nameLen + extraLen + commentLen;
+      const name = path.split('/').pop();
+      if (!PHOTO_FILE.test(name) || name.startsWith('._') || path.includes('__MACOSX/') || flags & 1 || (method !== 0 && method !== 8)) continue;
+      out.push({
+        name, size: usize,
+        open: async () => {
+          const h = new DataView(await file.slice(off, off + 30).arrayBuffer());
+          const start = off + 30 + h.getUint16(26, true) + h.getUint16(28, true);
+          const raw = file.slice(start, start + csize);
+          const body = method === 0 ? raw : await new Response(raw.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+          return new File([body], name, { type: PHOTO_TYPE[name.split('.').pop().toLowerCase()] || '' });
+        },
+      });
+    }
+    return out;
+  }
+
+  /** Bring in many photos with one progress line: skips photos already here, and keeps going past ones that fail. */
+  function importPhotos(label, sources) {
+    if (!wallet || !sources.length) return;
+    const li = document.createElement('li');
+    li.className = 'job';
+    li.innerHTML = '<span class="jn"></span><span class="js">Waiting</span><button class="stop" type="button">Stop</button>';
+    li.querySelector('.jn').textContent = `Importing from ${label}`;
+    const st = li.querySelector('.js'), stopBtn = li.querySelector('.stop');
+    $('jobs').prepend(li);
+    let stop = false, added = 0, dupes = 0, heic = 0, failed = 0;
+    stopBtn.onclick = () => { stop = true; stopBtn.remove(); };
+    const extras = () => [dupes && `${dupes} already here`, heic && `${heic} HEIC ${heic === 1 ? 'photo needs' : 'photos need'} Safari`, failed && `${failed} couldn’t be opened`].filter(Boolean);
+    queue = queue.then(async () => {
+      const who = identity;
+      if (syncing) await syncing; // photos still arriving from bDriveX count as already here
+      const mine = await store.mine(who);
+      const seen = new Set(mine.map((it) => it.src).filter(Boolean));
+      st.textContent = 'Checking your library';
+      for (const it of mine) {
+        if (it.src) continue;
+        const o = await opened({ id: it.id, body: it.sealed, local: it }).catch(() => null);
+        if (o?.meta.src) seen.add(o.meta.src);
+      }
+      for (let i = 0; i < sources.length && !stop && identity === who; i++) {
+        st.textContent = [`${i + 1} of ${sources.length}`, ...extras()].join(' · ');
+        try {
+          const file = await sources[i].open();
+          const src = await sha256(await file.arrayBuffer());
+          if (seen.has(src)) { dupes++; continue; }
+          await upload(wallet, file, (s) => {
+            if (s === 'Sealing with your wallet' && !flag('bphotosx.sealed')) st.textContent = 'Approve in bWalletX: let bPhotosX seal your photos';
+          }, src);
+          flag('bphotosx.sealed', true);
+          seen.add(src);
+          added++;
+          if (added % 8 === 0) loadPhotos();
+        } catch {
+          if (/\.(heic|heif)$/i.test(sources[i].name)) heic++; else failed++;
+        }
+      }
+      stopBtn.remove();
+      li.classList.add(added || dupes ? 'ok' : 'bad');
+      st.textContent = [`${stop ? 'Stopped. ' : ''}${added === 1 ? '1 photo' : `${added} photos`} imported`, ...extras()].join(' · ');
+      if (added) loadPhotos();
+    });
+  }
+
+  async function importZip(z) {
+    try {
+      const list = await zipPhotos(z);
+      if (!list.length) { toast(`No photos found in ${z.name}.`); return; }
+      importPhotos(z.name, list);
+    } catch (e) { toast((e && e.message) || `Couldn’t read ${z.name}.`); }
+  }
+
   /* ---------- uploads ---------- */
 
   let queue = Promise.resolve();
-  function addFiles(files) {
+  function addFiles(files, label) {
     if (!wallet) return;
-    const imgs = files.filter((f) => /^image\//.test(f.type) || /\.(heic|heif)$/i.test(f.name));
-    if (!imgs.length) { toast('Those aren’t photos. Try a JPEG, PNG or HEIC.'); return; }
+    files.filter(isZip).forEach(importZip);
+    const imgs = files.filter((f) => !isZip(f) && isPhoto(f));
+    if (!imgs.length) { if (!files.some(isZip)) toast('Those aren’t photos. Try JPEG, PNG or HEIC photos, or a .zip of them.'); return; }
+    // Many at once (a folder, a big selection): one progress line instead of one per photo.
+    if (label || imgs.length > 6) { importPhotos(label || `${imgs.length} photos`, imgs.map((f) => ({ name: f.name, open: async () => f }))); return; }
     for (const file of imgs) {
       const li = document.createElement('li');
       li.className = 'job';
@@ -791,6 +915,28 @@
     }
   }
   $('pick').onchange = (e) => { addFiles([...e.target.files]); e.target.value = ''; };
+  $('pickZip').onchange = (e) => { addFiles([...e.target.files]); e.target.value = ''; };
+  $('pickDir').onchange = (e) => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    if (!files.length) return;
+    const folder = (files[0].webkitRelativePath || '').split('/')[0] || 'a folder';
+    const photos = files.filter((f) => isPhoto(f) && !f.name.startsWith('._'));
+    if (!photos.length) { toast(`No photos found in ${folder}.`); return; }
+    addFiles(photos, folder);
+  };
+
+  // Import sheet: where each kind of photo comes from, and a button for each.
+  const importSheet = (open) => { $('importSheet').hidden = !open; if (open) $('importSheet').querySelector('[data-imp]').focus(); };
+  $('importBtn').onclick = () => importSheet(true);
+  $('impDone').onclick = () => importSheet(false);
+  $('importSheet').onclick = (e) => { if (e.target === $('importSheet')) importSheet(false); };
+  document.querySelectorAll('[data-imp]').forEach((b) => {
+    b.onclick = () => {
+      importSheet(false);
+      $({ photos: 'pick', folder: 'pickDir', zip: 'pickZip' }[b.dataset.imp]).click();
+    };
+  });
   // Drop anywhere on the page while signed in.
   let dragDepth = 0;
   const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');

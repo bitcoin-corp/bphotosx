@@ -450,3 +450,27 @@ body.pv-open{overflow:hidden}
 .sheet-row .xs-btn{flex:1 1 160px}
 /* toast */
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:80;max-width:calc(100vw - 32px);padding:14px 20px;border-radius:999px;background:var(--red);color:#0b1200;font:600 15px/1.3 var(--xs-hf);box-shadow:0 20px 50px -16px rgba(0,0,0,.9)}
+
+/* account header, import sheet, exchange (3 Nov 2026) */
+.acct-card{display:flex;align-items:center;gap:18px;min-width:0}
+.acct-card>div{min-width:0}
+.acct-big{flex:none;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--red);color:#0b1200;font:700 28px/1 var(--xs-hf);box-shadow:0 0 0 4px rgba(163,230,53,.18)}
+.lib-store{margin:4px 0 0;color:var(--dim);font-size:14px}
+.lib-acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.imp-btn{min-height:56px;padding:0 22px;gap:10px;font-size:16px}
+.imp-card{max-width:620px;max-height:calc(100vh - 32px);overflow:auto}
+.imp-list{list-style:none;margin:6px 0 14px;padding:0;display:grid;gap:10px}
+.imp-list li{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#050505}
+.imp-list li>div{flex:1 1 280px;min-width:0}
+.imp-list b{display:block;color:var(--xs-ink);margin-bottom:4px}
+.imp-list span{display:block;color:var(--muted);font-size:14px;line-height:1.45}
+.imp-list a{color:var(--red-hi,#bef264)}
+.imp-list .xs-btn{flex:none;min-height:42px}
+.imp-note{font-size:13px}
+.job .stop{margin-left:6px;padding:0;border:0;background:none;color:var(--muted);font:inherit;text-decoration:underline;cursor:pointer}
+.exch{border-top:1px solid var(--line)}
+.exch .steps{grid-template-columns:repeat(3,1fr)}
+.ex-go{max-width:1500px;margin:34px auto 0;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center}
+.ex-go p{margin:0;color:var(--muted);flex:1 1 280px}
+@media (max-width:900px){.exch .steps{grid-template-columns:1fr}.exch .steps li,.exch .steps li+li{padding:30px 0 6px;border-left:0}.exch .steps li+li{border-top:1px solid var(--line);margin-top:0}}
+@media (max-width:560px){.acct-big{width:48px;height:48px;font-size:22px}.lib-acts{width:100%}.lib-acts>*{flex:1 1 100%}}
