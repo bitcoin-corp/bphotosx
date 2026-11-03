@@ -33,7 +33,13 @@
   // `?mint=test` turns it on for this tab on a local preview only, for desktop testing.
   const MINTING_OPEN = false;
   const mintTest = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) && new URLSearchParams(location.search).get('mint') === 'test';
-  const canMint = MINTING_OPEN || mintTest;
+  // Invited accounts mint before everyone (CTO, 3 Nov 2026): their phones run the build with the fix. sha256 of the
+  // lowercased paymail that pay.bwallet.space returns for the signed-in identity key, so the handles aren't in the source.
+  const MINT_INVITED = new Set([
+    'cdbbb83f3c4be6aa0c8e9a447712e4cd38f93d069d4258e144c858ad403d15d3',
+    '4b806cf1d1103d39e95ee4391cfb87e2ef3d0f441de80528d878f4e08387c8e4',
+  ]);
+  let canMint = MINTING_OPEN || mintTest;
 
   const enc = (s) => new TextEncoder().encode(s);
   const toHex = (a) => Array.from(a, (x) => x.toString(16).padStart(2, '0')).join('');
@@ -439,7 +445,13 @@
       remember(true);
       displayName = '';
       drawNav();
-      lookupName(identity).then((n) => { if (n && identity) { displayName = n; drawNav(); } });
+      const who = identity;
+      lookupName(who).then(async (n) => {
+        if (!n || identity !== who) return;
+        displayName = n;
+        drawNav();
+        if (!canMint && MINT_INVITED.has(await sha256(enc(n.toLowerCase()))) && identity === who) canMint = true;
+      });
       loadPhotos().then(() => syncDrive());
       // Coming back signed in: open on your account, not the front page (the logo still goes there).
       if (quiet && !location.hash) { history.replaceState(null, '', '#library'); route(); }
@@ -467,6 +479,7 @@
     Object.assign(drive, { state: 'off', why: '' });
     wallet = identity = null;
     displayName = '';
+    canMint = MINTING_OPEN || mintTest;
     urls.forEach((u) => URL.revokeObjectURL(u.url));
     urls.clear();
     shown = [];
