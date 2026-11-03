@@ -24,6 +24,7 @@
   const MAGIC = [0x42, 0x50, 0x58, 0x31]; // "BPX1"
   const MAX_EDGE = 1600, QUALITY = 0.85;
   const PREVIEW_EDGE = 480, PREVIEW_QUALITY = 0.7;
+  const PREVIEW_GUESS = 15_000; // bytes, for the fee quote before a fetched photo's preview is made
   const MAX_SEALED_BYTES = 2_000_000;
   const FEE_SAT_PER_BYTE = 0.1; // 100 sat/kB, the bMintX / NPG rate (bMarketX lib/mint.js)
   const SEEN = 'bphotosx.connected';
@@ -108,19 +109,24 @@
     const [w, h] = fit(src.width, src.height, MAX_EDGE);
     const full = canvas(w, h);
     full.getContext('2d').drawImage(src, 0, 0, w, h);
+    src.close?.();
+    const [photo, preview] = await Promise.all([jpeg(full, QUALITY), blurred(full)]);
+    return { photo: new Uint8Array(await photo.arrayBuffer()), preview, w, h };
+  }
+
+  async function blurred(img) {
+    const { width: w, height: h } = img;
     const [pw, ph] = fit(w, h, PREVIEW_EDGE);
     const [tw, th] = fit(w, h, 24);
     const tiny = canvas(tw, th);
-    tiny.getContext('2d').drawImage(full, 0, 0, tw, th);
+    tiny.getContext('2d').drawImage(img, 0, 0, tw, th);
     const prev = canvas(pw, ph);
     const g = prev.getContext('2d');
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
     if ('filter' in g) g.filter = 'blur(6px)';
     g.drawImage(tiny, -8, -8, pw + 16, ph + 16);
-    src.close?.();
-    const [photo, preview] = await Promise.all([jpeg(full, QUALITY), jpeg(prev, PREVIEW_QUALITY)]);
-    return { photo: new Uint8Array(await photo.arrayBuffer()), preview: new Uint8Array(await preview.arrayBuffer()), w, h };
+    return new Uint8Array(await (await jpeg(prev, PREVIEW_QUALITY)).arrayBuffer());
   }
 
   /* ---------- sealing ---------- */
@@ -175,11 +181,20 @@
     if (sealed.length > MAX_SEALED_BYTES) throw new Error('That photo is too big.');
     const item = { key: `${identity}:${id}`, identity, id, name, addedAt, sealed, preview };
     await store.put(item);
+    if (syncing) await syncing; // signing in to bDriveX right now: wait for its answer
+    if (drive.state === 'on') {
+      onStep('Saving to bDriveX');
+      // If bDriveX can't take it now, it stays on this device and moves in on the next visit.
+      await driveKeep(item).catch(() => {});
+    }
     return item;
   }
 
-  async function mintPhoto(wallet, item, onStep) {
-    const { sealed, preview, name, id } = item;
+  async function mintPhoto(wallet, item, onStep, photoUrl) {
+    const { sealed, id } = item;
+    const name = item.name || 'Photo';
+    // A photo fetched from bDriveX has no preview on this device yet: blur one from the opened photo.
+    const preview = item.preview || await blurred(await decode(await (await fetch(photoUrl)).blob()));
     const ord = await wallet.getPublicKey({ protocolID: ORDINAL_RECEIVE, keyID: 'ordinal', counterparty: 'self' });
     const vault = await wallet.getPublicKey({ protocolID: PROTO, keyID: VAULT_KEY, counterparty: 'self' });
     onStep(`Approve in bWalletX (about ${quoteSats(preview.length + sealed.length).toLocaleString()} sats)`);
@@ -199,7 +214,7 @@
       options: { randomizeOutputs: false },
     });
     if (!txid) throw new Error('bWalletX didn’t return a transaction.');
-    await store.put({ ...item, txid });
+    await store.put({ ...item, preview, txid });
     return txid;
   }
 
@@ -227,6 +242,92 @@
       mine: (who) => tx('readonly', (s) => s.index('identity').getAll(who)).catch(() => []),
     };
   })();
+
+  /* ---------- bDriveX: the same library on every device ---------- */
+  // Sealed bodies go to bDriveX as they are (opaque ciphertext, addressed by sha256) and are labelled DRIVE_LABEL so
+  // bDriveX's own file list can tell photos from files. Sign-in is bDriveX's challenge signed by this wallet (one
+  // approval); the token is tied to this site and lasts 7 days. bDriveX is invite-only for now: a wallet that isn't on
+  // its list keeps its photos on this device, as before. IndexedDB stays as this device's copy of the library.
+
+  const DRIVE = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) ? 'http://127.0.0.1:8788' : 'https://files.bdrivex.com';
+  const DRIVE_LABEL = 'bpx1';
+  const drive = { token: null, until: 0, state: 'off', why: '' }; // state: off | on | invite | declined | down
+  const driveSaved = () => `bphotosx.drive:${identity}`;
+
+  class DriveError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+  async function driveCall(path, { method = 'GET', body, headers = {}, raw = false, auth = true } = {}) {
+    let r;
+    try {
+      r = await fetch(DRIVE + path, { method, body, headers: { ...headers, ...(auth ? { authorization: `Bearer ${drive.token}` } : {}) } });
+    } catch { throw new DriveError(0, 'bDriveX can’t be reached right now.'); }
+    if (!r.ok) {
+      const j = await r.json().catch(() => null);
+      throw new DriveError(r.status, j?.error || `bDriveX answered ${r.status}.`);
+    }
+    if (raw) return r;
+    return r.status === 204 ? null : r.json();
+  }
+  const drivePost = (path, obj) => driveCall(path, { method: 'POST', body: JSON.stringify(obj), headers: { 'content-type': 'application/json' }, auth: false });
+  function driveForget() {
+    drive.token = null;
+    drive.until = 0;
+    try { localStorage.removeItem(driveSaved()); } catch {}
+  }
+
+  /** This wallet's saved bDriveX session, if it has one that isn't about to end. */
+  function driveRestore() {
+    if (drive.token && drive.until > Date.now() + 60_000) return true;
+    try {
+      const s = JSON.parse(localStorage.getItem(driveSaved()) || 'null');
+      if (s && s.until > Date.now() + 60_000) { drive.token = s.token; drive.until = s.until; return true; }
+    } catch {}
+    return false;
+  }
+
+  /** A bDriveX session for this wallet: the saved one, or a new one the wallet signs. */
+  async function driveSignIn() {
+    if (driveRestore()) return;
+    const who = identity;
+    const c = await drivePost('/v1/auth/challenge', { identityKey: who }).catch((e) => {
+      throw e.status === 403 ? new DriveError(0, 'bDriveX isn’t open to bPhotosX yet.') : e;
+    });
+    const { signature } = await wallet.createSignature({
+      protocolID: c.protocolID || [2, 'bwallet sign in'], keyID: c.keyID, counterparty: 'anyone', data: Array.from(enc(c.message)),
+    });
+    const v = await drivePost('/v1/auth/verify', { identityKey: who, nonce: c.nonce, signature: Array.from(signature) });
+    if (v.scope && v.scope !== 'full') {
+      // Invited only to open a file someone sent this wallet: that session can't keep photos.
+      fetch(`${DRIVE}/v1/auth/signout`, { method: 'POST', headers: { authorization: `Bearer ${v.token}` } }).catch(() => {});
+      throw new DriveError(403, 'bDriveX is invite-only for now.');
+    }
+    if (who !== identity) throw new DriveError(0, 'The wallet changed.');
+    drive.token = v.token;
+    drive.until = v.expiresAt;
+    try { localStorage.setItem(driveSaved(), JSON.stringify({ token: v.token, until: v.expiresAt })); } catch {}
+  }
+
+  /** A call with the session; a 401 (signed out elsewhere, or expired) signs in again once. */
+  async function authed(fn) {
+    await driveSignIn();
+    try { return await fn(); } catch (e) {
+      if (!(e instanceof DriveError) || e.status !== 401) throw e;
+      driveForget();
+      await driveSignIn();
+      return fn();
+    }
+  }
+  const sha256 = async (b) => toHex(new Uint8Array(await crypto.subtle.digest('SHA-256', b)));
+  const driveList = async () => ((await authed(() => driveCall('/v1/files'))).files || []).filter((f) => f.meta === DRIVE_LABEL);
+  const driveGet = async (hash) => new Uint8Array(await (await authed(() => driveCall(`/v1/blobs/${hash}`, { raw: true }))).arrayBuffer());
+  const driveDelete = (hash) => authed(() => driveCall(`/v1/files/${hash}`, { method: 'DELETE' }));
+  async function driveKeep(item) {
+    const hash = await sha256(item.sealed);
+    await authed(() => driveCall(`/v1/blobs/${hash}`, {
+      method: 'PUT', body: item.sealed, headers: { 'content-type': 'application/octet-stream', 'x-bdx-meta': DRIVE_LABEL },
+    }));
+    item.drive = hash;
+    await store.put(item);
+  }
 
   /* ---------- wallet and account ---------- */
 
@@ -336,7 +437,7 @@
       displayName = '';
       drawNav();
       lookupName(identity).then((n) => { if (n && identity) { displayName = n; drawNav(); } });
-      loadPhotos();
+      loadPhotos().then(() => syncDrive());
       if (!quiet) {
         goLibrary();
         toast('Signed in with bWalletX. This is your private library.');
@@ -355,6 +456,10 @@
   function disconnect() {
     try { C.clearPairing?.(); } catch {}
     remember(false);
+    // End the bDriveX session too. Sealed copies stay on this device, and only this wallet can open them.
+    if (drive.token) fetch(`${DRIVE}/v1/auth/signout`, { method: 'POST', headers: { authorization: `Bearer ${drive.token}` } }).catch(() => {});
+    if (identity) driveForget();
+    Object.assign(drive, { state: 'off', why: '' });
     wallet = identity = null;
     displayName = '';
     urls.forEach((u) => URL.revokeObjectURL(u.url));
@@ -386,10 +491,10 @@
 
   async function loadPhotos() {
     const seq = ++loadSeq;
-    const grid = $('grid'), count = $('count');
+    const grid = $('grid');
     // Uploaded on this device, plus anything minted (also found when uploaded elsewhere), one entry per photo id.
     const byId = new Map();
-    for (const it of await store.mine(identity)) byId.set(it.id, { id: it.id, body: it.sealed, local: it, txid: it.txid || null });
+    for (const it of await store.mine(identity)) byId.set(it.id, { id: it.id, body: it.sealed, local: it, txid: it.txid || null, drive: it.drive || null });
     try {
       const r = await wallet.listOutputs({ basket: BASKET, include: 'locking scripts', limit: 200 });
       for (const o of r.outputs || []) {
@@ -399,16 +504,14 @@
         if (!id) continue;
         const e = byId.get(id);
         const txid = String(o.outpoint).split(/[._]/)[0];
-        if (e) e.txid = e.txid || txid; else byId.set(id, { id, body: ins.body, local: null, txid });
+        if (e) e.txid = e.txid || txid; else byId.set(id, { id, body: ins.body, local: null, txid, drive: null });
       }
     } catch {
       // the wallet can refuse a listing; this device's uploads still show
     }
     if (seq !== loadSeq) return;
     shown = [...byId.values()].sort((a, b) => String(b.local?.addedAt || '').localeCompare(String(a.local?.addedAt || '')));
-    const minted = shown.filter((e) => e.txid).length;
-    count.textContent = !shown.length ? 'No photos yet.'
-      : `${shown.length === 1 ? '1 photo' : `${shown.length} photos`} · private${minted ? ` · ${minted} minted` : ' · none minted yet'}`;
+    drawCount();
     grid.innerHTML = '';
     if (!shown.length) { grid.innerHTML = emptyState(); return; }
     const tiles = shown.map((e, i) => {
@@ -430,7 +533,7 @@
           if (seq !== loadSeq) return;
           t.className = 'tile';
           t.disabled = false;
-          t.innerHTML = `<img alt=""><span class="badge${e.txid ? ' on' : ''}">${e.txid ? 'Minted' : 'Private · on this device'}</span><span class="tile-nm"></span>`;
+          t.innerHTML = `<img alt=""><span class="badge${e.txid ? ' on' : ''}">${e.txid ? 'Minted' : e.drive ? 'Private · bDriveX' : 'Private · on this device'}</span><span class="tile-nm"></span>`;
           t.querySelector('img').src = url;
           t.querySelector('img').alt = meta.name || 'Photo';
           t.querySelector('.tile-nm').textContent = meta.name || 'Photo';
@@ -441,6 +544,87 @@
       }
     };
     await Promise.all([work(), work()]);
+  }
+
+  /** Where the library is, in the line under "Signed in as". */
+  function drawCount() {
+    const count = $('count'), n = shown.length;
+    if (!identity) return;
+    const kept = shown.filter((e) => e.drive).length, minted = shown.filter((e) => e.txid).length;
+    const retry = ` <button class="lib-retry" type="button" id="driveRetry">${n ? 'Keep them in bDriveX' : 'Use bDriveX for your photos'}</button>`;
+    const where = {
+      on: kept === n ? 'in bDriveX, on all your devices' : `moving into bDriveX, ${kept} of ${n}`,
+      signing: 'on this device · approve in bWalletX to keep them in bDriveX',
+      invite: 'on this device · bDriveX is invite-only for now',
+    }[drive.state] || 'on this device';
+    const empty = 'No photos yet.' + ({
+      on: ' New photos are kept in bDriveX, on all your devices.',
+      invite: ' bDriveX is invite-only for now, so they’ll stay on this device.',
+    }[drive.state] || '');
+    let html = !n ? esc(empty) : esc(`${n === 1 ? '1 photo' : `${n} photos`} · private · ${where}${minted ? ` · ${minted} minted` : ''}`);
+    if (drive.state === 'declined' || drive.state === 'down') {
+      html += drive.why && drive.state === 'down' ? ` <span class="lib-why">(${esc(drive.why)})</span>` : '';
+      html += retry;
+    }
+    count.innerHTML = html;
+    const b = $('driveRetry');
+    if (b) b.onclick = () => syncDrive(true);
+  }
+
+  /**
+   * Level this device with bDriveX: fetch photos added on other devices, move this device's photos in, and drop
+   * copies of photos deleted elsewhere. The first time, the wallet asks to sign in to bDriveX.
+   * ask: also after a "no" earlier on this page (the retry button).
+   */
+  let syncing = null;
+  function syncDrive(ask) {
+    if (syncing) return syncing;
+    if (!ask && ['declined', 'invite'].includes(drive.state)) return Promise.resolve();
+    const who = identity;
+    let changed = 0;
+    return (syncing = (async () => {
+      try {
+        if (!driveRestore()) { drive.state = 'signing'; drawCount(); }
+        await driveSignIn();
+        if (who !== identity) return;
+        drive.state = 'on';
+        drive.why = '';
+        drawCount();
+        const remote = await driveList();
+        const live = new Set(remote.map((f) => f.hash));
+        let local = await store.mine(who);
+        for (const it of local) {
+          if (it.drive && !live.has(it.drive)) { await store.del(it.key); changed++; } // deleted on another device
+        }
+        local = local.filter((it) => !it.drive || live.has(it.drive));
+        const held = new Set(local.map((it) => it.drive).filter(Boolean));
+        for (const f of remote) {
+          if (held.has(f.hash) || who !== identity) continue;
+          const sealed = await driveGet(f.hash);
+          const id = sealedId(sealed);
+          if (!id || (await sha256(sealed)) !== f.hash) continue;
+          const same = local.find((it) => it.id === id);
+          if (same) { same.drive = f.hash; await store.put(same); continue; }
+          const addedAt = new Date(f.createdAt || Date.now()).toISOString();
+          await store.put({ key: `${who}:${id}`, identity: who, id, name: '', addedAt, sealed, preview: null, drive: f.hash });
+          changed++;
+        }
+        for (const it of local) {
+          if (it.drive || who !== identity) continue;
+          await driveKeep(it);
+          changed++;
+          const e = shown.find((x) => x.id === it.id);
+          if (e) { e.drive = it.drive; drawCount(); }
+        }
+      } catch (e) {
+        if (who !== identity) return;
+        drive.state = e instanceof DriveError ? (e.status === 403 ? 'invite' : 'down') : 'declined';
+        drive.why = (e && e.message) || '';
+      } finally {
+        syncing = null;
+        if (who === identity) { if (changed) loadPhotos(); else drawCount(); }
+      }
+    })());
   }
 
   async function opened(e) {
@@ -474,30 +658,30 @@
     $('pvName').textContent = meta.name || 'Photo';
     const chips = e.txid
       ? ['Private', 'Encrypted with your wallet', 'Minted on chain', 'Preview in Wallet › NFTs']
-      : [e.local ? 'Private' : 'Private', 'Encrypted with your wallet', e.local ? 'On this device only' : 'From your wallet', 'Not on chain', 'Nothing paid'];
-    $('pvStatus').innerHTML = chips.map((c, k) => `<li class="${k < 2 || (e.txid && k === 2) ? 'ok' : ''}">${esc(c)}</li>`).join('');
+      : ['Private', 'Encrypted with your wallet', e.drive ? 'In bDriveX, on all your devices' : e.local ? 'On this device only' : 'From your wallet', 'Not on chain', 'Nothing paid'];
+    $('pvStatus').innerHTML = chips.map((c, k) => `<li class="${k < 2 || (k === 2 && (e.txid || e.drive)) ? 'ok' : ''}">${esc(c)}</li>`).join('');
     const mint = $('lbMint');
     mint.hidden = !!e.txid || !e.local;
     mint.disabled = !canMint;
     mint.textContent = canMint ? 'Mint on chain' : 'Minting opens soon';
-    const fee = e.local ? quoteSats(e.local.preview.length + e.local.sealed.length) : 0;
+    const fee = e.local ? quoteSats((e.local.preview?.length || PREVIEW_GUESS) + e.local.sealed.length) : 0;
     $('lbNote').textContent = e.txid
       ? 'Minted. The sealed original is on chain and held by your wallet, with a blurred preview in Wallet › NFTs.'
       : canMint
         ? `Minting puts this photo on chain, held by your wallet: the original stays sealed, and a blurred preview shows in Wallet › NFTs. The network fee is ${feeText(fee)}, and your wallet shows it before you approve. Minting is permanent.`
-        : `Minting will put this photo on chain, held by your wallet. The network fee will be ${feeText(fee)}. Minting opens when the bWalletX phone update ships; until then the photo stays private on this device, and nothing is paid.`;
+        : `Minting will put this photo on chain, held by your wallet. The network fee will be ${feeText(fee)}. Minting opens when the bWalletX phone update ships; until then the photo stays private ${e.drive ? 'in bDriveX' : 'on this device'}, and nothing is paid.`;
     $('lbTx').hidden = !e.txid;
     if (e.txid) $('lbTx').href = `https://whatsonchain.com/tx/${e.txid}`;
     $('lbSave').href = url;
     $('lbSave').download = `${(meta.name || 'photo').replace(/[^\w .-]/g, '')}.jpg`;
     $('lbDel').hidden = !e.local || !!e.txid;
-    $('lbDel').textContent = 'Remove from this device';
+    $('lbDel').textContent = e.drive ? 'Delete from all your devices' : 'Remove from this device';
     const when = meta.addedAt || meta.mintedAt;
     const rows = [
       ['Added', when ? new Date(when).toLocaleString() : ''],
       ['Size', meta.w && meta.h ? `${meta.w} × ${meta.h} px · ${kb(bytes)}` : kb(bytes)],
       ['Location data', 'Removed'],
-      ['Stored', e.txid ? 'On chain, sealed' : 'In this browser, sealed'],
+      ['Stored', e.txid && e.drive ? 'On chain and in bDriveX, sealed' : e.txid ? 'On chain, sealed' : e.drive ? 'In bDriveX, sealed' : 'In this browser, sealed'],
       ['Photo id', e.id],
     ].filter((r) => r[1]);
     $('pvMeta').innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
@@ -532,7 +716,8 @@
     const btn = $('lbMint');
     btn.disabled = true;
     try {
-      const txid = await mintPhoto(wallet, e.local, (s) => { btn.textContent = s; });
+      const o = urls.get(e.id);
+      const txid = await mintPhoto(wallet, { ...e.local, name: e.local.name || o?.meta.name }, (s) => { btn.textContent = s; }, o?.url);
       e.local = { ...e.local, txid };
       closePhoto();
       toast('Minted. It’s on chain, held by your wallet.');
@@ -549,13 +734,23 @@
   $('lbDel').onclick = async () => {
     const e = shown[current], btn = $('lbDel');
     if (!e || !e.local || e.txid) return;
-    if (btn.textContent !== 'Tap again to remove') { btn.textContent = 'Tap again to remove'; return; }
+    const again = e.drive ? 'Tap again to delete everywhere' : 'Tap again to remove';
+    if (btn.textContent !== again) { btn.textContent = again; return; }
+    if (e.drive) {
+      btn.disabled = true;
+      try {
+        await driveDelete(e.drive);
+      } catch (err) {
+        btn.textContent = (err && err.message) || 'Not deleted. Try again.';
+        return;
+      } finally { btn.disabled = false; }
+    }
     await store.del(e.local.key);
     const u = urls.get(e.id);
     if (u) URL.revokeObjectURL(u.url);
     urls.delete(e.id);
     closePhoto();
-    toast('Removed from this device.');
+    toast(e.drive ? 'Deleted from bDriveX and this device. Your other devices drop it when they next open bPhotosX.' : 'Removed from this device.');
     loadPhotos();
   };
 
@@ -578,14 +773,14 @@
       // One at a time: each photo is one wallet call to seal its key.
       queue = queue.then(async () => {
         try {
-          await upload(wallet, file, (s) => {
+          const item = await upload(wallet, file, (s) => {
             st.textContent = s === 'Sealing with your wallet' && !flag('bphotosx.sealed')
               ? 'Approve in bWalletX: let bPhotosX seal your photos'
               : s;
           });
           flag('bphotosx.sealed', true);
           li.classList.add('ok');
-          st.textContent = 'Uploaded · private · on this device';
+          st.textContent = item.drive ? 'Uploaded · private · in bDriveX' : 'Uploaded · private · on this device';
           setTimeout(() => { li.remove(); URL.revokeObjectURL(thumb); }, 5000);
           loadPhotos();
         } catch (e) {

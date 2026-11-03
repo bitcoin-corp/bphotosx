@@ -392,6 +392,8 @@ body.pv-open{overflow:hidden}
 .lib-h{font:700 clamp(28px,4vw,48px)/1.02 var(--xs-hf);letter-spacing:-.03em;color:#fff;margin:0;overflow-wrap:anywhere}
 .lib-h span{color:var(--red)}
 .lib-count{margin:10px 0 0;color:var(--muted)}
+.lib-why{opacity:.8}
+.lib-retry{margin-left:6px;padding:0;border:0;background:none;color:var(--xs-acc,#A3E635);font:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .up-btn{min-height:56px;padding:0 28px;font-size:17px;gap:10px;box-shadow:0 14px 40px -14px rgba(245,184,0,.7)}
 .up-btn .ic,.empty-drop .ic,.dropzone .ic{width:22px;height:22px;flex:none}
 .empty-drop{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:clamp(48px,8vw,96px) 20px;border:2px dashed rgba(163,230,53,.45);border-radius:18px;background:rgba(163,230,53,.04);text-align:center;cursor:pointer;color:var(--muted)}
